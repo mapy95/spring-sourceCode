@@ -172,11 +172,26 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @param allowEarlyReference whether early references should be created or not
 	 * @return the registered singleton object, or {@code null} if none found
 	 */
+	/**
+	 * mpy
+	 * @param beanName
+	 * @param allowEarlyReference
+	 * @return
+	 *
+	 * singletonObjects是spring单实例池
+	 * 我们暂时称
+	 *   earlySingletonObjects为三级缓存  该map是在后面进行判断，是否允许循环依赖，如果允许，就把bean存到这个map中
+	 *   singletonFactories为二级缓存  在判断是单实例bean的时候，将包含bean的beanFactory存到该map中
+	 *
+	 *   在这里，三级缓存的map保存的是从二级缓存中取到的一个对象，取到之后，从二级缓存中将bean删除
+	 *   这样做是为了防止重复创建，
+	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
 		Object singletonObject = this.singletonObjects.get(beanName);
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
 			synchronized (this.singletonObjects) {
+				//mpy 这里只需要从二级缓存中拿一次就行，如果没有二级缓存，每次进来都需要从二级缓存get一次，影响效率
 				singletonObject = this.earlySingletonObjects.get(beanName);
 				if (singletonObject == null && allowEarlyReference) {
 					ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);

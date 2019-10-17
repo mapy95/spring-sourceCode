@@ -84,6 +84,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 *
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
+		//mpy 在this()中调用父类的方法  创建了 DefaultListableBeanFactory
 		this();
 		register(annotatedClasses);
 		refresh();

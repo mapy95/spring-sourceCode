@@ -239,9 +239,21 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected <T> T doGetBean(final String name, @Nullable final Class<T> requiredType,
 			@Nullable final Object[] args, boolean typeCheckOnly) throws BeansException {
 
+		/**
+		 * 通过name获取beanName,这里不使用name直接作为beanName有两个原因：
+		 *  1.name可能是以&开头的，表明调用者想获取FactoryBean本身，而非FactoryBean;在beanFactory中factoryBean的存储也是map格式
+		 *    <beanName,bean> 只是说，普通的beanName是没有&这个字符串的，所以，需要将name的首字母移除，这样才能从缓存中拿到factoryBean
+		 *  2.还是别名的问题，需要转换
+		 */
 		final String beanName = transformedBeanName(name);
 		Object bean;
 
+		/**
+		 * mpy
+		 * 1.从单例池中获取当前bean
+		 * 2.这里是循环依赖的重要方法之一
+		 *
+		 */
 		// Eagerly check singleton cache for manually registered singletons.
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
@@ -260,6 +272,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
+			/**
+			 * mpy
+			 * 这里判断bean是否在创建过程中，是第二次调用的时候 才会判断；如果是第一次执行到这里，set集合是空
+			 */
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
