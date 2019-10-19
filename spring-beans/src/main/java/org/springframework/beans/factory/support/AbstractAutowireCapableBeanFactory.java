@@ -1705,7 +1705,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
-			//mpy 执行initializingBean方法
+			//mpy 执行initializingBean方法，就是spring的初始化方法  @PostContruct
 			invokeInitMethods(beanName, wrappedBean, mbd);
 		}
 		catch (Throwable ex) {

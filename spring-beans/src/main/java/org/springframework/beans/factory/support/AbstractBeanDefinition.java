@@ -74,6 +74,16 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * Constant that indicates autowiring bean properties by name.
 	 * @see #setAutowireMode
 	 */
+	/**
+	 * mpy
+	 *  spring在初始化bean的时候，会先获取到当前的注入mode是什么
+	 *  如果autowireMode是1，会获取初始化bean中的所有set方法，如：
+	 *   假如要在UserService中注入areaService，如果autowireMode是1，
+	 *   spring会扫描UserService类中所有的set方法，我们需要提供一个setAreaService()方法，（如果autowiremode是1，不需要提供@AutoWire注释）
+	 *   1.并且set方法的参数必须在spring容器中  setAreaService(AreaService areaService);如果参数不在spring容器中  也不行
+	 *   2.并且set方法的方法名必须是要注入的bean的名称
+	 *
+	 */
 	public static final int AUTOWIRE_BY_NAME = AutowireCapableBeanFactory.AUTOWIRE_BY_NAME;
 
 	/**
@@ -85,6 +95,10 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	/**
 	 * Constant that indicates autowiring a constructor.
 	 * @see #setAutowireMode
+	 */
+	/**
+	 * 如果设置的注入模式是3 根据构造函数注入
+	 * 那么spring会使用类中所有符合要求的 参数最多的构造函数，
 	 */
 	public static final int AUTOWIRE_CONSTRUCTOR = AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR;
 
