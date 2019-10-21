@@ -139,11 +139,13 @@ class ConstructorResolver {
 		}
 
 		if (constructorToUse == null) {
+			//mpy 如果没有已经解析的构造方法，就需要自己去解析构造方法
 			// Need to resolve the constructor.
 			boolean autowiring = (chosenCtors != null ||
 					mbd.getResolvedAutowireMode() == AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
 			ConstructorArgumentValues resolvedValues = null;
 
+			//minNrOfArgs 是表示构建bean最少需要的参数个数，默认是0，如果说指定了需要使用两个参数，那explicitArgs就等于2
 			int minNrOfArgs;
 			if (explicitArgs != null) {
 				minNrOfArgs = explicitArgs.length;
@@ -159,6 +161,7 @@ class ConstructorResolver {
 			if (candidates == null) {
 				Class<?> beanClass = mbd.getBeanClass();
 				try {
+					//这里会获取到bean中所有的构造函数，并将构造函数进行排序，参数最多的在最前面
 					candidates = (mbd.isNonPublicAccessAllowed() ?
 							beanClass.getDeclaredConstructors() : beanClass.getConstructors());
 				}
@@ -168,14 +171,36 @@ class ConstructorResolver {
 							"] from ClassLoader [" + beanClass.getClassLoader() + "] failed", ex);
 				}
 			}
+			/**
+			 * 这里会根据构造方法的访问权限级别和参数数量进行排序
+			 *  先根据构造方法权限排序，权限相同的 根据参数数量来排序
+			 *  public XXXX(a,b,c)
+			 *  public XXXX(A,B)
+			 *  protected xxxx(a,b,c)
+			 *  protected xxxx(a,b)
+			 */
 			AutowireUtils.sortConstructors(candidates);
+			//定义了一个变异差量，默认为int的最大值
 			int minTypeDiffWeight = Integer.MAX_VALUE;
 			Set<Constructor<?>> ambiguousConstructors = null;
 			LinkedList<UnsatisfiedDependencyException> causes = null;
 
+			/**
+			 * 循环所有的构造方法
+			 */
 			for (Constructor<?> candidate : candidates) {
 				Class<?>[] paramTypes = candidate.getParameterTypes();
 
+				/**
+				 * 这一行判断 是spring推断使用哪个构造函数的核心方法
+				 * constructorToUse的意思是：
+				 *   这个变量是用来保存已经解析过来并且在使用的构造方法，只有在这个参数为空的情况下才有推算的必要性
+				 *   如果已经解析到一个符合的构造方法，就会赋值给这个变量；所以，如果这个变量不为null，就直接返回，说明spring已经找到了一个合适的构造方法，可以直接使用
+				 *
+				 *  argsToUse.length > paramTypes.length  paramTypes在第一次取出来的时候，是public参数最多的构造函数(因为前面有排序)，
+				 *  所以，如果排序后的第一个构造函数都比argsToUse小 ，那么后面就没有判断的必要了
+				 *
+				 */
 				if (constructorToUse != null && argsToUse.length > paramTypes.length) {
 					// Already found greedy constructor that can be satisfied ->
 					// do not look any further, there are only less greedy constructors left.
@@ -192,6 +217,11 @@ class ConstructorResolver {
 						if (paramNames == null) {
 							ParameterNameDiscoverer pnd = this.beanFactory.getParameterNameDiscoverer();
 							if (pnd != null) {
+								/**
+								 * 获取构造函数参数名称列表
+								 * 如果说有个后遭函数(String luban,Object zilu)
+								 * 那么 paramNames就是 [luban,zilu]
+								 */
 								paramNames = pnd.getParameterNames(candidate);
 							}
 						}

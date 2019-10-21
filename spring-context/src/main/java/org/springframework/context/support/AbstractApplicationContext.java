@@ -536,6 +536,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				 *
 				 * 该方法在spring的环境中执行已经被注册的factory processors；
 				 * 执行自定义的processBeanFactory
+				 *
+				 * spring 自己的类，不借助spring扫描，会直接放到beanDefinitionMap
 				 */
 				invokeBeanFactoryPostProcessors(beanFactory);
 
@@ -704,6 +706,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * <p>Must be called before singleton instantiation.
 	 */
 	protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
+		/**
+		 * getBeanFactoryPostProcessors 是获取手动给spring的beanFactoryPostProcessor，
+		 * 自定义并不仅仅是程序员自己写的
+		 * 自己写的可以加@Component，也可以不加
+		 * 如果加了注解，getBeanFactoryPostProcessors这里是获取不到的，是spring自己扫描的
+		 * 为什么得不到，因为这个方法是直接获取一个list
+		 * 这个list是在AnnotationCOnfigApplicationContext中被定义的
+		 *
+		 */
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found in the meantime
@@ -879,6 +890,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
+		//上面的代码可以简单理解为对spring进行的一些校验
 		beanFactory.preInstantiateSingletons();
 	}
 

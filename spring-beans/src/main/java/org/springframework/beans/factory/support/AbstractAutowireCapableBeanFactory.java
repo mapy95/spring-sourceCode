@@ -471,7 +471,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// Prepare method overrides.
-		//这个方法是处理lookup-method 和replace-method配置
+		//这个方法是处理lookup-method 和replace-method配置  lookup-method可以处理原型的循环依赖
 		try {
 			mbdToUse.prepareMethodOverrides();
 		}
@@ -481,7 +481,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
-			//mpy 第一次调用bean后置处理器 ；在bean初始化之前应用后置处理器，如果后置处理器返回的bean不为空，直接返回
+			/**
+			 *mpy 第一次调用bean后置处理器 ；在bean初始化之前应用后置处理器，如果后置处理器返回的bean不为空，直接返回
+			 *  这里其实调用的是实现BeanPostProcessor的类
+			 */
+
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			if (bean != null) {
@@ -542,6 +546,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			 *    3.通过无参构造方法创建bean实例
 			 *
 			 *  如果bean的配置中配置了lookup-method和replace-method  则会使用增强bean实例
+			 *
+			 *
 			 */
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
@@ -584,6 +590,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		try {
 			//在populateBean(beanName, mbd, instanceWrapper);方法中完成第五次第六次调用后置处理器
 			populateBean(beanName, mbd, instanceWrapper);
+			//在initialzeBean中完成第七次第八次后置处理器调用
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 		}
 		catch (Throwable ex) {
@@ -1096,6 +1103,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// Make sure bean class is actually resolved at this point.
 		Class<?> beanClass = resolveBeanClass(mbd, beanName);
 
+		//mpy 检测一个类的访问权限，spring默认情况下对于非public的类是允许访问的
 		if (beanClass != null && !Modifier.isPublic(beanClass.getModifiers()) && !mbd.isNonPublicAccessAllowed()) {
 			throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 					"Bean class isn't public, and non-public access not allowed: " + beanClass.getName());
@@ -1106,6 +1114,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			return obtainFromSupplier(instanceSupplier, beanName);
 		}
 
+		//mpy 如果工厂方法不为空，就通过工厂方法构建bean对象  待学习
 		if (mbd.getFactoryMethodName() != null)  {
 			return instantiateUsingFactoryMethod(beanName, mbd, args);
 		}
@@ -1121,17 +1130,23 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				}
 			}
 		}
+		//如果要构造的bean是单实例的，resolved永远是 false
 		if (resolved) {
 			if (autowireNecessary) {
+				//mpy  通过构造方法自动装配的方式构造bean对象
 				return autowireConstructor(beanName, mbd, null, null);
 			}
 			else {
+				//mpy 通过默认的无参构造方法构造bean对象
 				return instantiateBean(beanName, mbd);
 			}
 		}
 
 		// Candidate constructors for autowiring?
-		// mpy 实例化对象里面：第二次调用后置处理器  由后置处理器决定返回哪些构造函数
+		/**
+		 * mpy 实例化对象里面：第二次调用后置处理器  由后置处理器决定返回哪些构造函数(推断使用哪个构造方法)
+		 *  当注入模型为0 的时候 就是autowireMode = 0；无论类中提供了多少个构造函数  这里返回的ctors都是0
+		 */
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
 		if (ctors != null || mbd.getResolvedAutowireMode() == AUTOWIRE_CONSTRUCTOR ||
 				mbd.hasConstructorArgumentValues() || !ObjectUtils.isEmpty(args))  {

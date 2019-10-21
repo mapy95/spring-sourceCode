@@ -63,6 +63,11 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 */
 	public AnnotationConfigApplicationContext() {
 		this.reader = new AnnotatedBeanDefinitionReader(this);
+		/**
+		 * mpy
+		 * 实际上完成包扫描并不是这里的scanner完成的。而是spring自己new的一个ClassPathBeanDefinitionScanner完成的
+		 * 这里的scanner是为了程序员能够在外部调用annotationConfigApplicationbContext对象
+		 */
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -84,8 +89,9 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 *
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
-		//mpy 在this()中调用父类的方法  创建了 DefaultListableBeanFactory
+		//mpy 在this()中调用父类的方法  创建了 DefaultListableBeanFactory(这就是平常说的springbean工厂)
 		this();
+		//把annotatedClasses(AppConfig.java)放到spring容器中
 		register(annotatedClasses);
 		refresh();
 	}
