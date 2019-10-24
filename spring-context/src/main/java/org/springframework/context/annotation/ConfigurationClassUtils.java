@@ -109,6 +109,7 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
+		//如果元数据包含@Configuration注解，就执行下面的方法
 		if (isFullConfigurationCandidate(metadata)) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}

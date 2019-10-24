@@ -213,13 +213,21 @@ public class AnnotatedBeanDefinitionReader {
 	<T> void doRegisterBean(Class<T> annotatedClass, @Nullable Supplier<T> instanceSupplier, @Nullable String name,
 			@Nullable Class<? extends Annotation>[] qualifiers, BeanDefinitionCustomizer... definitionCustomizers) {
 
+		/**
+		 * 创建一个beanDefinition，beanDefinition保存了类的其他信息，比如：元注解信息、lazy属性等
+		 */
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(annotatedClass);
+		/**
+		 * 判断是否需要跳过解析
+		 *  判断条件是是否加注解，因为当前类是解析加了注解的类的
+		 */
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
 			return;
 		}
 
 		abd.setInstanceSupplier(instanceSupplier);
 		ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);
+		//添加类的作用域
 		abd.setScope(scopeMetadata.getScopeName());
 		String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
 
@@ -241,8 +249,15 @@ public class AnnotatedBeanDefinitionReader {
 			customizer.customize(abd);
 		}
 
+		//beanDefinitionHolder也是一种数据结构 先暂时认为definitionHolder比beanDefinition存储的信息更为丰富
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
+		/**
+		 * 这是是把创建的definitionHolder注册到registry
+		 * registry就是AnnotationConfigApplicationContext初始化创建的DefaultListableBeanFactory
+		 *
+		 * 内部调用的是DefautListableBeanFactory.registerBeanDefinition()方法
+		 */
 		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
 	}
 

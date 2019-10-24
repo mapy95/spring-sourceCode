@@ -237,6 +237,9 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 * Prepare the Configuration classes for servicing bean requests at runtime
 	 * by replacing them with CGLIB-enhanced subclasses.
 	 */
+	/**
+	 *  如果将bean存入到beanDefinitionMap第二步
+	 */
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		int factoryId = System.identityHashCode(beanFactory);
@@ -313,6 +316,9 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
 		do {
+			/**
+			 *  如果将bean存入到beanDefinitionMap第三步
+			 */
 			parser.parse(candidates);
 			parser.validate();
 

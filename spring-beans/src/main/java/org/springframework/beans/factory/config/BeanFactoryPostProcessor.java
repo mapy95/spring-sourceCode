@@ -46,6 +46,7 @@ import org.springframework.beans.BeansException;
 /**
  * mpy
  * 这是spring的扩展点之一，实现该接口之后，可以在实例化bean之前对bean进行一系列的操作
+ * 可以修改bean的作用域，
  */
 @FunctionalInterface
 public interface BeanFactoryPostProcessor {

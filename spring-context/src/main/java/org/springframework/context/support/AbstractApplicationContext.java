@@ -645,6 +645,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * Configure the factory's standard context characteristics,
 	 * such as the context's ClassLoader and post-processors.
 	 * @param beanFactory the BeanFactory to configure
+	 *
+	 *  给bean工厂设置属性  这里的bean工厂就是DefaultListableBeanFactory
 	 */
 	protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		// Tell the internal bean factory to use the context's class loader etc.
@@ -653,6 +655,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
+		/**
+		 * ApplicationContextAwareProcessor
+		 *
+		 * 下面这个方法是给spring工厂添加beanPostProcessor（spring自己的+程序员实现的beanPostProcessor）
+		 *
+		 * 想要知道下面这句是什么意思，首先要搞明白 ApplicationContextAwareProcessor是什么
+		 */
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
 		beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
@@ -710,9 +719,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		 * getBeanFactoryPostProcessors 是获取手动给spring的beanFactoryPostProcessor，
 		 * 自定义并不仅仅是程序员自己写的
 		 * 自己写的可以加@Component，也可以不加
-		 * 如果加了注解，getBeanFactoryPostProcessors这里是获取不到的，是spring自己扫描的
-		 * 为什么得不到，因为这个方法是直接获取一个list
-		 * 这个list是在AnnotationCOnfigApplicationContext中被定义的
+		 * 如果加了注解，getBeanFactoryPostProcessors()这里是获取不到的，是spring自己扫描的
+		 *  为什么得不到，因为这个方法是直接获取一个list
+		 *  这个list是在AnnotationConfigApplicationContext中被定义的
+		 *
+		 * 简单而言，这里说的自定义是指：程序员自己的bean，并且没有加@Component注解的类；如果没有加注解，怎么交给spring呢？
+		 * 在调用annotationConfigApplicationContext的refresh()方法之前  将自定义的beanFactoryPostProcessor添加到容器ac中
+		 *
+		 *
 		 *
 		 */
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());

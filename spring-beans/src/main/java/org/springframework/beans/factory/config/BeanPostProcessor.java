@@ -40,6 +40,36 @@ import org.springframework.lang.Nullable;
  * @see ConfigurableBeanFactory#addBeanPostProcessor
  * @see BeanFactoryPostProcessor
  */
+
+/**
+ * beanPostProcessor 是后置处理器
+ * beanPostProcessor是spring的一个扩展点(spring的扩展点不止一个)
+ *
+ *  注意点：
+ *    如果是程序员自己实现的postProcessor 那么需要加@Component注解  将bean交给spring管理
+ *    如果是spring自己的postProcessor,那么spring会自己set进去
+ *
+ *
+ *  这是几个比较重要的后置处理器
+ * 1.ApplicationContextAwareProcessor
+ *
+ *
+ * 2.InitDestroyAnnotationBeanPostProcessor
+ *   用来处理自定义的初始化方法和销毁方法
+ *   spring提供了三种初始化方法
+ * @PostConstruct
+ * @Bean 指定init-method和destroy-method
+ * bean实现InitializingBean和DisposableBean
+ *
+ * 通过这个后置处理器  就可以来解释为什么这三种方法都能完成对bean生命周期的回调
+ *
+ * 3.InstantiationAwareBeanPostProcessor
+ * 4.CommonAnnotationBeanPostProcessor
+ * 5.AutowiredAnnotationBeanPostProcessor
+ * 6.RequiredAnnotationBeanPostProcessor
+ * 7.BeanValidationPostProcessor
+ * 8.AbstractAutoProxyCreator
+ */
 public interface BeanPostProcessor {
 
 	/**

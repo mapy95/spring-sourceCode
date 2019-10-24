@@ -67,6 +67,7 @@ final class PostProcessorRegistrationDelegate {
 					registryProcessors.add(registryProcessor);
 				}
 				else {
+					//将beanFactoryPostProcessor添加到regularPostProcessors
 					regularPostProcessors.add(postProcessor);
 				}
 			}
@@ -80,6 +81,7 @@ final class PostProcessorRegistrationDelegate {
 			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
+
 			for (String ppName : postProcessorNames) {
 				if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
 					currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
@@ -129,6 +131,9 @@ final class PostProcessorRegistrationDelegate {
 
 		else {
 			// Invoke factory processors registered with the context instance.
+			/**
+			 *  如果将bean存入到beanDefinitionMap第一步
+			 */
 			invokeBeanFactoryPostProcessors(beanFactoryPostProcessors, beanFactory);
 		}
 
