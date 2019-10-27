@@ -471,7 +471,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// Prepare method overrides.
-		//这个方法是处理lookup-method 和replace-method配置  lookup-method可以处理原型的循环依赖
+		/**
+		 * 这个方法是处理lookup-method 和replace-method配置  lookup-method可以处理原型的循环依赖
+		 * 在spring中，我们把lookup-method和replace-method统一称为 prepareMethodOverrides
+		 */
 		try {
 			mbdToUse.prepareMethodOverrides();
 		}
@@ -547,6 +550,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			 *
 			 *  如果bean的配置中配置了lookup-method和replace-method  则会使用增强bean实例
 			 *
+			 * 在这个方法中完成了对bean的创建(仅仅是new出来，也就是或在这个方法里面推断要使用哪个构造函数来创建bean对象)
 			 *
 			 */
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
@@ -1114,12 +1118,19 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			return obtainFromSupplier(instanceSupplier, beanName);
 		}
 
-		//mpy 如果工厂方法不为空，就通过工厂方法构建bean对象  待学习
+		/**
+		 * mpy 如果工厂方法不为空，就通过工厂方法构建bean对象  待学习
+		 *
+		 * 需要了解什么是factoryMethod
+		 */
 		if (mbd.getFactoryMethodName() != null)  {
 			return instantiateUsingFactoryMethod(beanName, mbd, args);
 		}
 
 		// Shortcut when re-creating the same bean...
+		/**
+		 *
+		 */
 		boolean resolved = false;
 		boolean autowireNecessary = false;
 		if (args == null) {
@@ -1154,6 +1165,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// No special handling: simply use no-arg constructor.
+		//使用默认的构造函数初始化
 		return instantiateBean(beanName, mbd);
 	}
 

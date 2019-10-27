@@ -274,7 +274,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			// We're assumably within a circular reference.
 			/**
 			 * mpy
-			 * 这里判断bean是否在创建过程中，是第二次调用的时候 才会判断；如果是第一次执行到这里，set集合是空
+			 * 这里判断bean是否在创建过程中，是第二次调用的时候 才会判断；如果是第一次执行到这里，set集合是空（这里判断的是原型bean）
 			 */
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
@@ -299,6 +299,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 			}
 
+			//添加到alreadyCreated集合当中，表示当前bean已经创建过一次了
 			if (!typeCheckOnly) {
 				markBeanAsCreated(beanName);
 			}

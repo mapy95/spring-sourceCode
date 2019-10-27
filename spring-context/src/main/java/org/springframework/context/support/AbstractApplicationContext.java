@@ -537,7 +537,22 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				 * 该方法在spring的环境中执行已经被注册的factory processors；
 				 * 执行自定义的processBeanFactory
 				 *
+				 * 在这个方法中，注入bean，分为了三种
+				 * 一、普通bean：@Component注解的bean
 				 * spring 自己的类，不借助spring扫描，会直接放到beanDefinitionMap
+				 *
+				 * 1.获取到所有的beanFactoryPostProcessor
+				 * 2.执行 bean后置处理器的postProcessBeanFactory（configurationClassPostProcessor）,该方法会把beanFactory作为入参传到方法里面
+				 * 3.从beanFactory中获取到所有的beanName   打断点看一下 org.springframework.context.annotation .ConfigurationClassPostProcessor#processConfigBeanDefinitions
+				 *
+				 * 4.然后将所有的bean包装成beanDefinitionHolder,在后面又根据beanName和bean的metadata包装成了ConfigurationClass
+				 * 5.把所有包含@ComponentScan的类取出来，遍历每一个componentScan,调用 ClassPathBeanDefinitionScanner.doScan(basePackages)方法
+				 * 6.在doScan方法中，会遍历basePackages,因为一个ComponentScan中可以配置多个要扫描的包
+				 * 7.获取每个包下面的 *.class文件，registerBeanDefinition(definitionHolder, this.registry); 这个方法底层就是调用org.springframework.beans.factory.support.DefaultListableBeanFactory#registerBeanDefinition方法  把当前bean put到beanDefinitionMap中
+				 *
+				 * 二、是通过@Import注解注入的bean
+				 *
+				 * 三、ImportBeanDefinitionRegistrar注入的bean
 				 */
 				invokeBeanFactoryPostProcessors(beanFactory);
 
@@ -560,7 +575,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// Instantiate all remaining (non-lazy-init) singletons.
 				/**
 				 * TODO
-				 * 完成对bean的初始化
+				 * 完成对bean的实例化
 				 */
 				finishBeanFactoryInitialization(beanFactory);
 
@@ -651,7 +666,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		// Tell the internal bean factory to use the context's class loader etc.
 		beanFactory.setBeanClassLoader(getClassLoader());
+		//bean 表达式解析器
 		beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
+
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
@@ -719,11 +736,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		 * getBeanFactoryPostProcessors 是获取手动给spring的beanFactoryPostProcessor，
 		 * 自定义并不仅仅是程序员自己写的
 		 * 自己写的可以加@Component，也可以不加
-		 * 如果加了注解，getBeanFactoryPostProcessors()这里是获取不到的，是spring自己扫描的
-		 *  为什么得不到，因为这个方法是直接获取一个list
-		 *  这个list是在AnnotationConfigApplicationContext中被定义的
+		 * 如果加了注解，getBeanFactoryPostProcessors()这里是获取不到的，加了注解的beanFactoryPostProcessor是spring自己扫描的
 		 *
-		 * 简单而言，这里说的自定义是指：程序员自己的bean，并且没有加@Component注解的类；如果没有加注解，怎么交给spring呢？
+		 *  为什么得不到，因为这个方法是直接获取一个list,这个list是在AnnotationConfigApplicationContext中被定义的,只有在调用ac.addBeanFactoryPostProcessor();的时候，才会给list赋值
+		 *
+		 * 简单而言，这里说的自定义是指：程序员自己的bean，并且没有加@Component注解的类；（手动添加到spring容器中的）如果没有加注解，怎么交给spring呢？
 		 * 在调用annotationConfigApplicationContext的refresh()方法之前  将自定义的beanFactoryPostProcessor添加到容器ac中
 		 *
 		 *

@@ -114,6 +114,14 @@ class ConstructorResolver {
 		BeanWrapperImpl bw = new BeanWrapperImpl();
 		this.beanFactory.initBeanWrapper(bw);
 
+		/**
+		 * constructorToUse 这个变量保存的就是 后置处理器推断出来的要用哪个构造函数进行初始化
+		 *
+		 * argsHolderToUse是保存构造方法的值，注意不是参数
+		 * 在调用反射的时候，需要把具体的值传过去，这里的变量就是来记录这些值的
+		 *
+		 * argsToUse 是参数值列表
+		 */
 		Constructor<?> constructorToUse = null;
 		ArgumentsHolder argsHolderToUse = null;
 		Object[] argsToUse = null;

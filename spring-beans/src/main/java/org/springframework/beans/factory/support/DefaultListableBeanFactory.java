@@ -723,7 +723,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	}
 
 	@Override
-	public void preInstantiateSingletons() throws BeansException {
+	public void xpreInstantiateSingletons() throws BeansException {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Pre-instantiating singletons in " + this);
 		}
@@ -733,12 +733,15 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
 		// Trigger initialization of all non-lazy singleton beans...
-		//触发所有非延迟加载单实例bean的加载，加载的过程就是调用getBean()方法
+		//触发所有非延迟加载单实例bean的加载，加载的过程就是调用getBean()方法  上面获取到的是所有的beanName
 		for (String beanName : beanNames) {
+			/**
+			 * 合并父类beanDefinition
+			 */
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				//判断当前bean是否是beanFactory；如果是factoryBean + &
 				if (isFactoryBean(beanName)) {
-					//如果是factoryBean + &
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
 						final FactoryBean<?> factory = (FactoryBean<?>) bean;
@@ -833,7 +836,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				}
 			}
 			/**
-			 *  如果将bean存入到beanDefinitionMap第10步
+			 *  如果将bean存入到beanDefinitionMap第十步
 			 */
 			this.beanDefinitionMap.put(beanName, beanDefinition);
 		}

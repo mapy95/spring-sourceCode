@@ -254,6 +254,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			processConfigBeanDefinitions((BeanDefinitionRegistry) beanFactory);
 		}
 
+		//产生cglib代理  加不加@Configuration就体现在这里
 		enhanceConfigurationClasses(beanFactory);
 		beanFactory.addBeanPostProcessor(new ImportAwareBeanPostProcessor(beanFactory));
 	}
@@ -263,17 +264,22 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 * {@link Configuration} classes.
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
+		//这个list用来保存 添加@Component的类
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
+		//获取在 new AnnotatedBeanDefinitionReader(this);中注入的spring自己的beanPostProcessor
 		String[] candidateNames = registry.getBeanDefinitionNames();
 
 		for (String beanName : candidateNames) {
+			//获取所有的beanName,从beanDefinitionMap中获取beanDefinition
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
+			//如果bean是注解版的，就是full，否则就是lite
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef) ||
 					ConfigurationClassUtils.isLiteConfigurationClass(beanDef)) {
 				if (logger.isDebugEnabled()) {
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
 			}
+			//校验bean是否包含@Configuration  也就是校验bean是哪种配置类？注解？还是普通的配置类   待验证  spring如何将一个对象创建为beanDefinition？
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
 			}
@@ -285,6 +291,9 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		}
 
 		// Sort by previously determined @Order value, if applicable
+		/**
+		 * 对config类进行 排序   configCandidates中保存的是项目中的配置类 (AppConfig ....)，或者说是加了@Configuration注解的类
+		 */
 		configCandidates.sort((bd1, bd2) -> {
 			int i1 = ConfigurationClassUtils.getOrder(bd1.getBeanDefinition());
 			int i2 = ConfigurationClassUtils.getOrder(bd2.getBeanDefinition());
@@ -309,15 +318,19 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		}
 
 		// Parse each @Configuration class
+		//实例化ConfigurationClassParser是为了解析各个配置类
 		ConfigurationClassParser parser = new ConfigurationClassParser(
 				this.metadataReaderFactory, this.problemReporter, this.environment,
 				this.resourceLoader, this.componentScanBeanNameGenerator, registry);
 
+		//这两个set主要是为了去重
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
 		do {
 			/**
 			 *  如果将bean存入到beanDefinitionMap第三步
+			 *
+			 *  这里的candidates的个数是由项目中 配置文件的数量来决定的(或者说加了@Configuration或者@ComponentScan或者@Component注解的类)
 			 */
 			parser.parse(candidates);
 			parser.validate();
@@ -331,6 +344,13 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 						registry, this.sourceExtractor, this.resourceLoader, this.environment,
 						this.importBeanNameGenerator, parser.getImportRegistry());
 			}
+
+			/**
+			 * 这里的configClasses 就是parse方法中，对import注解进行处理时，存入的；
+			 * 这里面存放的是import注入类返回数组对象中的bean(就是实现importSelector接口的类中返回的值，也就是要在import中注入的bean对应的全类名)
+			 *
+			 * 在这个方法里面 完成了对ImportSelector和ImportBeanDefinitionRegistrar注入的bean进行初始化
+			 */
 			this.reader.loadBeanDefinitions(configClasses);
 			alreadyParsed.addAll(configClasses);
 
@@ -392,6 +412,13 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				configBeanDefs.put(beanName, (AbstractBeanDefinition) beanDef);
 			}
 		}
+		/**
+		 * 只有在configBeanDefs这个map不为空的时候  才会创建动态代理
+		 * 也就是说 只有加了@Configuration注解  才会为配置类创建动态代理
+		 *
+		 * 简单而言：如果说AppConfig加了@Configuration注解，那么在spring容器中 appConfig就是一个代理对象
+		 * 如果没有加注解，那APPConfig在spring容器中就是一个普通的bean
+		 */
 		if (configBeanDefs.isEmpty()) {
 			// nothing to enhance -> return immediately
 			return;
@@ -406,6 +433,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				// Set enhanced subclass of the user-specified bean class
 				Class<?> configClass = beanDef.resolveBeanClass(this.beanClassLoader);
 				if (configClass != null) {
+					//完成对全注解类的cglib代理(全注解类就是加了@Configuration注解的配置类)
 					Class<?> enhancedClass = enhancer.enhance(configClass, this.beanClassLoader);
 					if (configClass != enhancedClass) {
 						if (logger.isDebugEnabled()) {

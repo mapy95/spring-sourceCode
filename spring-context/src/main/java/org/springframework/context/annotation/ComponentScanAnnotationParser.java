@@ -74,9 +74,11 @@ class ComponentScanAnnotationParser {
 
 
 	public Set<BeanDefinitionHolder> parse(AnnotationAttributes componentScan, final String declaringClass) {
+		//这里的scanner就是spring自己new出来的，用来扫描包的scanner
 		ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(this.registry,
 				componentScan.getBoolean("useDefaultFilters"), this.environment, this.resourceLoader);
 
+		//bean的生成器
 		Class<? extends BeanNameGenerator> generatorClass = componentScan.getClass("nameGenerator");
 		boolean useInheritedGenerator = (BeanNameGenerator.class == generatorClass);
 		scanner.setBeanNameGenerator(useInheritedGenerator ? this.beanNameGenerator :
@@ -130,7 +132,7 @@ class ComponentScanAnnotationParser {
 			}
 		});
 		/**
-		 *  如果将bean存入到beanDefinitionMap第7步
+		 *  如果将bean存入到beanDefinitionMap第七步
 		 */
 		return scanner.doScan(StringUtils.toStringArray(basePackages));
 	}

@@ -113,7 +113,8 @@ public class AnnotationConfigUtils {
 			"org.springframework.context.event.internalEventListenerProcessor";
 
 	/**
-	 * The bean name of the internally managed EventListenerFactory.
+	 * The bean name of the internally managed EventListenerF
+	 * actory.
 	 */
 	public static final String EVENT_LISTENER_FACTORY_BEAN_NAME =
 			"org.springframework.context.event.internalEventListenerFactory";
