@@ -185,6 +185,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 *
 	 *   在这里，三级缓存的map保存的是从二级缓存中取到的一个对象，取到之后，从二级缓存中将bean删除
 	 *   这样做是为了防止重复创建，
+	 *
+	 *   在获取到依赖的对象之后，会进行一次类型校验 org.springframework.beans.factory.support.AbstractBeanFactory#isTypeMatch(java.lang.String, org.springframework.core.ResolvableType)
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {

@@ -115,6 +115,10 @@ import org.springframework.util.StringUtils;
  * @see Autowired
  * @see Value
  */
+
+/**
+ * 处理@Autowired注解
+ */
 public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBeanPostProcessorAdapter
 		implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware {
 
@@ -262,6 +266,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		}
 
 		// Quick check on the concurrent map first, with minimal locking.
+		//定义一个存放构造函数的数组
 		Constructor<?>[] candidateConstructors = this.candidateConstructorsCache.get(beanClass);
 		if (candidateConstructors == null) {
 			// Fully synchronized resolution now...
@@ -270,6 +275,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 				if (candidateConstructors == null) {
 					Constructor<?>[] rawCandidates;
 					try {
+						//拿到bean所有的构造函数
 						rawCandidates = beanClass.getDeclaredConstructors();
 					}
 					catch (Throwable ex) {
@@ -278,20 +284,29 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 								"] from ClassLoader [" + beanClass.getClassLoader() + "] failed", ex);
 					}
 					List<Constructor<?>> candidates = new ArrayList<>(rawCandidates.length);
+					/**
+					 * requiredConstructor: 必要的
+					 * defaultConstructor： 默认的
+					 * primaryConstructor
+					 */
 					Constructor<?> requiredConstructor = null;
 					Constructor<?> defaultConstructor = null;
 					Constructor<?> primaryConstructor = BeanUtils.findPrimaryConstructor(beanClass);
+					//nonSyntheticConstructors:这个变量是用来
 					int nonSyntheticConstructors = 0;
 					for (Constructor<?> candidate : rawCandidates) {
+						//判断当前构造方法是否是混合构造方法
 						if (!candidate.isSynthetic()) {
 							nonSyntheticConstructors++;
 						}
 						else if (primaryConstructor != null) {
 							continue;
 						}
+						//判断当前构造方法是否有@Autowired注解或者@Value注解；如果有注解，那会返回注解对应的value
 						AnnotationAttributes ann = findAutowiredAnnotation(candidate);
 						if (ann == null) {
 							Class<?> userClass = ClassUtils.getUserClass(beanClass);
+							//判断构造方法对应的类和传过来的类是否是同一个
 							if (userClass != beanClass) {
 								try {
 									Constructor<?> superCtor =

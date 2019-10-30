@@ -65,8 +65,11 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		/**
 		 * 创建一个读取注解的bean定义读取器
 		 * bean定义其实就是beanDefinition
-		 * 在这个方法里面 声明了六个比较重要的beanFactoryPostProcessor
-		 *
+		 * 在这个方法里面 声明了六个比较重要的bean,并将这个几个bean存到了beanDefinitionMap里面
+		 * CommonAnnotationBeanPostProcessor
+		 * RequiredAnnotationBeanPostProcessor
+		 * AutowiredAnnotationBeanPostProcessor
+		 * ConfigurationClassPostProcessor
 		 */
 		this.reader = new AnnotatedBeanDefinitionReader(this);
 		/**
