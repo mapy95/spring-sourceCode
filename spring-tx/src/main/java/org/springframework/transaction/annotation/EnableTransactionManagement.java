@@ -168,6 +168,16 @@ public @interface EnableTransactionManagement {
 	 * time. This approach has no negative impact in practice unless one is explicitly
 	 * expecting one type of proxy vs another, e.g. in tests.
 	 */
+	/**
+	 * @return
+	 *
+	 * proxyTargetClass
+	 *  true:
+	 *    无论目标方法是否实现了接口，都使用CGLIB代理
+	 *  false：
+	 *    如果目标方法实现了接口，使用JDK动态代理
+	 *    如果目标方法没有实现接口，使用CGLIB代理
+	 */
 	boolean proxyTargetClass() default false;
 
 	/**
@@ -180,12 +190,23 @@ public @interface EnableTransactionManagement {
 	 * scenario. For a more advanced mode of interception, consider switching this to
 	 * {@link AdviceMode#ASPECTJ}.
 	 */
+	/**
+	 * @return
+	 *
+	 * 事务通知模式(切面织入方式)：
+	 *  默认是代理模式
+	 */
 	AdviceMode mode() default AdviceMode.PROXY;
 
 	/**
 	 * Indicate the ordering of the execution of the transaction advisor
 	 * when multiple advices are applied at a specific joinpoint.
 	 * <p>The default is {@link Ordered#LOWEST_PRECEDENCE}.
+	 */
+	/**
+	 * @return
+	 *
+	 * 连接点有多个通知时，根据order来排序，值越大，优先级越小
 	 */
 	int order() default Ordered.LOWEST_PRECEDENCE;
 

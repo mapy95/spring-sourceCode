@@ -101,7 +101,7 @@ final class PostProcessorRegistrationDelegate {
 					processedBeans.add(ppName);
 				}
 			}
-			//排序，合并spring自己打的和程序员自定义的beanFactoryRegistryPostProcessor
+			//排序，合并spring自己的和程序员自定义的beanFactoryRegistryPostProcessor
 			sortPostProcessors(currentRegistryProcessors, beanFactory);
 			registryProcessors.addAll(currentRegistryProcessors);
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);

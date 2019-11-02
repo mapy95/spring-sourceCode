@@ -561,15 +561,25 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				registerBeanPostProcessors(beanFactory);
 
 				// Initialize message source for this context.
+				//初始化MessageSource组件(该组件在spring中用来做国际化、消息绑定、消息解析)
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
+				/**
+				 * 注册一个多事件派发器
+				 * 先从beanFactory获取，如果没有，就创建一个，并将创建的派发器放到beanFactory中
+				 */
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
 				onRefresh();
 
 				// Check for listener beans and register them.
+				/**
+				 * 注册所有的事件监听器
+				 * 将容器中的时间监听器添加到 applicationEventMulticaster 中
+				 *
+				 */
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
@@ -582,6 +592,10 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
+				/**
+				 * 当容器刷新完成之后，发送容器刷新完成事件
+				 * publishEvent(new ContextRefreshedEvent(this));
+				 */
 				finishRefresh();
 			}
 

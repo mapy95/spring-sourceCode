@@ -252,7 +252,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			if (this.advisedBeans.containsKey(cacheKey)) {
 				return null;
 			}
-			//判断当前bean是否是切面，如果是，放到advisedBeans这个map中，这个map是不需要增强的集合
+			//判断当前bean是否是切面，如果是，放到advisedBeans这个map中，这个map中值为false的是不需要增强的集合
 			if (isInfrastructureClass(beanClass) || shouldSkip(beanClass, beanName)) {
 				this.advisedBeans.put(cacheKey, Boolean.FALSE);
 				return null;
@@ -262,6 +262,9 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		// Create proxy here if we have a custom TargetSource.
 		// Suppresses unnecessary default instantiation of the target bean:
 		// The TargetSource will handle target instances in a custom fashion.
+		/**
+		 * 这里的TargetSource是spring aop预留给用户自定义实例化的接口，如果存在targetSource，就不会默认实例化,而是按照用户定义的进行实例化
+		 */
 		TargetSource targetSource = getCustomTargetSource(beanClass, beanName);
 		if (targetSource != null) {
 			if (StringUtils.hasLength(beanName)) {
@@ -339,19 +342,25 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	 * @return a proxy wrapping the bean, or the raw bean instance as-is
 	 */
 	protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+		//这是用户自定义的，无需增强
 		if (StringUtils.hasLength(beanName) && this.targetSourcedBeans.contains(beanName)) {
 			return bean;
 		}
 		if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
 			return bean;
 		}
+		//如果当前bean中有@PointCut @Advice注解，标识当前bean无需增强
 		if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
 			this.advisedBeans.put(cacheKey, Boolean.FALSE);
 			return bean;
 		}
 
 		// Create proxy if we have advice.
-		//拿出所有的切面
+		/**
+		 * 拿出所有的切面来比较，canApply 这个方法一定要看
+		 * 大致的意思是：获取到当前bean中的所有方法(拿出的是自己在类中定义的方法  还有object的方法)
+		 * 循环所有的方法，和@Before注解的execution来比较，找到符合织入规则的方法，返回true
+ 		 */
 		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
 		if (specificInterceptors != DO_NOT_PROXY) {
 			this.advisedBeans.put(cacheKey, Boolean.TRUE);

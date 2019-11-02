@@ -379,6 +379,10 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 	@Override
 	public PropertyValues postProcessPropertyValues(
 			PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeanCreationException {
+		/**
+		 *  个人理解：这里是根据beanName查找当前bean是否有要注入的bean
+		 *  injectedElement中存放了当前bean要注入的对象
+		 */
 
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
 		try {
