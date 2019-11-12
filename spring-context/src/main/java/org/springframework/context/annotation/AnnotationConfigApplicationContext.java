@@ -76,6 +76,14 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		 * mpy
 		 * 实际上完成包扫描并不是这里的scanner完成的。而是spring自己new的一个ClassPathBeanDefinitionScanner完成的
 		 * 这里的scanner是为了程序员能够在外部调用annotationConfigApplicationbContext对象
+		 *
+		 * 这个方法里面的registerDefaultFilters这个方法也比较重要，在后面将bean放到beanDefinitionMap的时候，有用到这个地方
+		 * registerDefaultFilters 这个方法，向一个list(includeFilters)中添加了三个值
+		 *   Component.class
+		 *   javax.annotation.ManagedBean
+		 *   javax.inject.Named
+		 *
+		 * 在扫描@ComponentScan下面的bean时，获取到的是包路径下所有的.class文件，那spring如何区分是要将哪些bean注入的呢？在后面包扫描会加注释
 		 */
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}

@@ -317,6 +317,7 @@ public abstract class AopUtils {
 				// already processed
 				continue;
 			}
+			//对普通bean中的方法进行判断
 			if (canApply(candidate, clazz, hasIntroductions)) {
 				eligibleAdvisors.add(candidate);
 			}

@@ -428,6 +428,15 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 				if (resource.isReadable()) {
 					try {
 						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
+						/**
+						 * isCandidateComponent 也是扫描bean中一个比较核心的方法吧
+						 * 由于这里的resource是包下所有的class文件，所以，需要在这个方法中判断是否符合注入条件
+						 *
+						 * 在AnnatationConfigApplication构造函数中，初始化了一个ClassPathBeanDefinitionScanner;
+						 * 在初始化这个bean的时候，给一个list中存入了三个类，其中有一个就是Component.class，个人理解：在这个方法中，会
+						 * 判断扫描出来的class文件是否有Component注解；需要注意的是@Controller @Service @Repository都是被@Component注解修饰的
+						 * 所以，@Controller... 这些注解修饰的bean也会被注入到spring容器中
+						 */
 						if (isCandidateComponent(metadataReader)) {
 							ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 							sbd.setResource(resource);
