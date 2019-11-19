@@ -83,10 +83,12 @@ public class InjectionMetadata {
 		Collection<InjectedElement> elementsToIterate =
 				(checkedElements != null ? checkedElements : this.injectedElements);
 		if (!elementsToIterate.isEmpty()) {
+			//对当前类所依赖的对象进行循环注入
 			for (InjectedElement element : elementsToIterate) {
 				if (logger.isDebugEnabled()) {
 					logger.debug("Processing injected element of bean '" + beanName + "': " + element);
 				}
+				//这里的inject会跳转到AutowiredAnnotationBeanPostProcessor的AutowiredFieldElement的inject方法 必须debug才会跳过去
 				element.inject(target, beanName, pvs);
 			}
 		}

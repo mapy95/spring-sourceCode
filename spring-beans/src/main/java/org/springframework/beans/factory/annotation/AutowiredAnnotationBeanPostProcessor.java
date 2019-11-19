@@ -583,8 +583,10 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 			this.required = required;
 		}
 
+		//这是处理属性注入的方法 @Autowired
 		@Override
 		protected void inject(Object bean, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
+			//field是当前bean依赖的bean对象，比如A中注入了B，那这里的field就是 private com.xxxx.B com.XXX.A.b
 			Field field = (Field) this.member;
 			Object value;
 			if (this.cached) {
@@ -597,6 +599,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 				Assert.state(beanFactory != null, "No BeanFactory available");
 				TypeConverter typeConverter = beanFactory.getTypeConverter();
 				try {
+					//这里的beanName是当前bean，desc里面是依赖的bean
 					value = beanFactory.resolveDependency(desc, beanName, autowiredBeanNames, typeConverter);
 				}
 				catch (BeansException ex) {
