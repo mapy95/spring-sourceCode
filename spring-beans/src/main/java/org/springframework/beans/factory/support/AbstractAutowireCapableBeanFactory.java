@@ -565,7 +565,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		synchronized (mbd.postProcessingLock) {
 			if (!mbd.postProcessed) {
 				try {
-					//mpy 第三次调用后置处理器  缓存注解信息
+					//mpy 第三次调用后置处理器  缓存注解信息;通过后置处理器合并beanDefinition
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				}
 				catch (Throwable ex) {
@@ -585,7 +585,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				logger.debug("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
-			//mpy 第四次调用后置处理器 获取一个提前暴露的对象  用来解决循环依赖
+			//mpy 第四次调用后置处理器 获取一个提前暴露的对象 objectFactory 用来解决循环依赖
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 
@@ -1733,6 +1733,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}, getAccessControlContext());
 		}
 		else {
+			//回调所有的aware方法
 			invokeAwareMethods(beanName, bean);
 		}
 
