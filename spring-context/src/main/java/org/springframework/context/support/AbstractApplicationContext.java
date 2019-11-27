@@ -518,7 +518,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			prepareRefresh();
 
 			// Tell the subclass to refresh the internal bean factory.
-			//返回一个factory
+			/**
+			 * 返回一个factory
+			 * xml格式的配置文件，是在这个方法中扫描到beanDefinitionMap中的
+			 * 在org.springframework.web.context.support.XmlWebApplicationContext#loadBeanDefinitions(org.springframework.beans.factory.support.DefaultListableBeanFactory)中会创建一个XmlBeanDefinitionReader来解析xml文件
+			 * 会把bean.xml解析成一个InputStream,然后再解析成document格式
+			 * 按照document格式解析，从root节点进行解析，判断root节点是bean？还是beans?还是import等，如果是bean
+			 * 就把解析到的信息包装成beanDefinitionHolder，然后调用DefaultListablebeanFactory的注册方法将bean放到beanDefinitionMap中
+			 */
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.

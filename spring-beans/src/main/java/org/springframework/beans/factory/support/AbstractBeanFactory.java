@@ -499,6 +499,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		}
 	}
 
+	//在getBean的时候，如果传的是接口的class,会在这里判断beanDefinitionNames中的bean，判断哪个bean是接口的子类，如果是，就按照子类进行注入
 	@Override
 	public boolean isTypeMatch(String name, ResolvableType typeToMatch) throws NoSuchBeanDefinitionException {
 		String beanName = transformedBeanName(name);
