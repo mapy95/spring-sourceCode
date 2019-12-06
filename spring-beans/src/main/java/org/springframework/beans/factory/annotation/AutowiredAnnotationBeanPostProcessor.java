@@ -117,7 +117,8 @@ import org.springframework.util.StringUtils;
  */
 
 /**
- * 处理@Autowired注解
+ * 处理@Autowired注解、注入
+ * 在实例化bean的时候，推断构造函数使用哪个
  */
 public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBeanPostProcessorAdapter
 		implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware {
@@ -266,11 +267,15 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		}
 
 		// Quick check on the concurrent map first, with minimal locking.
-		//定义一个存放构造函数的数组
+		/**
+		 * 每个类的构造函数，spring都会解析一遍，解析之后，保存下来，下次再使用时，无需重复解析；定义一个存放构造函数的数组
+		 *
+		 */
 		Constructor<?>[] candidateConstructors = this.candidateConstructorsCache.get(beanClass);
 		if (candidateConstructors == null) {
 			// Fully synchronized resolution now...
 			synchronized (this.candidateConstructorsCache) {
+				//synchronized锁住之后，再获取一遍
 				candidateConstructors = this.candidateConstructorsCache.get(beanClass);
 				if (candidateConstructors == null) {
 					Constructor<?>[] rawCandidates;
@@ -283,6 +288,10 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 								"Resolution of declared constructors on bean Class [" + beanClass.getName() +
 								"] from ClassLoader [" + beanClass.getClassLoader() + "] failed", ex);
 					}
+					/**
+					 * 这里代码写的挺巧妙的，rawCandidates是当前bean所有的构造函数；candidates是推断出来可用的构造函数，candidates的长度最大不会超过当前
+					 * bean所有构造函数的和
+					 */
 					List<Constructor<?>> candidates = new ArrayList<>(rawCandidates.length);
 					/**
 					 * requiredConstructor: 必要的
