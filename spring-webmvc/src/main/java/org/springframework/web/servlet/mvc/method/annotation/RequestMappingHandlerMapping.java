@@ -53,6 +53,11 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMappi
  * @author Sam Brannen
  * @since 3.1
  */
+
+/**
+ * 在springmvc初始化映射地址的时候，会先执行这个类中的afterPropertiesSet()方法，当前类在WebMvcConfigurationSupport中通过@Bean注入到了beanDefinitionMap中，所以在spring初始化bean的时候，会执行这个方法
+ *
+ */
 public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMapping
 		implements MatchableHandlerMapping, EmbeddedValueResolverAware {
 

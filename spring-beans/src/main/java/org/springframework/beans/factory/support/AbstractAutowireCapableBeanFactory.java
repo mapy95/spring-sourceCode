@@ -485,8 +485,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		try {
 			/**
-			 *mpy 第一次调用bean后置处理器 ；在bean初始化之前应用后置处理器，如果后置处理器返回的bean不为空，直接返回
-			 *  这里其实调用的是实现BeanPostProcessor的类
+			 *mpy 第一次调用bean后置处理器 ；在bean初始化之前调用后置处理器，如果后置处理器返回的bean不为空，直接返回
+			 *  这里调用的是postProcessBeforeInstantiation；
+			 *  InstantiationAwareBeanPostProcessor  是beanPostProcessor的子类，所以，在instantiationAwareBeanPostProcessor中，对beanPostProcessor进行了扩展
 			 */
 
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.

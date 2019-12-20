@@ -275,6 +275,11 @@ public class DispatcherServlet extends FrameworkServlet {
 
 	private static final Properties defaultStrategies;
 
+	/**
+	 * springmvc源码第一步：
+	 *  在new DispatherServlet();的时候，先执行静态代码块，从jar中，dispatcherServlet.properties中加载所有的配置信息
+	 *  将配置信息存到defaultStrategies
+	 */
 	static {
 		// Load default strategy implementations from properties file.
 		// This is currently strictly internal and not meant to be customized
@@ -494,6 +499,16 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * Initialize the strategy objects that this servlet uses.
 	 * <p>May be overridden in subclasses in order to initialize further strategy objects.
 	 */
+	/**
+	 * @param context
+	 *
+	 * springmvc源码第二步：
+	 *  在init中初始化下面这些信息
+	 *   initHandlerMappings()：从spring单实例池中，获取到类型为HandlerMapping的所有bean；然后再获取到webmvc默认的两个handlerMapping
+	 *   initHandlerAdapters();和初始化handlerMapping一样
+	 *
+	 *  springboot增加了几个handlerMapping和handlerAdapter，利用的是WebMvcAutoConfiguration.class，在类中，通过@Bean把springboot自己的handlerMapping和handlerAdapter添加到spring容器中
+	 */
 	protected void initStrategies(ApplicationContext context) {
 		initMultipartResolver(context);
 		initLocaleResolver(context);
@@ -582,6 +597,7 @@ public class DispatcherServlet extends FrameworkServlet {
 
 		if (this.detectAllHandlerMappings) {
 			// Find all HandlerMappings in the ApplicationContext, including ancestor contexts.
+			//下面这个方法中，内部是从spring单实例池中获取对象的
 			Map<String, HandlerMapping> matchingBeans =
 					BeanFactoryUtils.beansOfTypeIncludingAncestors(context, HandlerMapping.class, true, false);
 			if (!matchingBeans.isEmpty()) {
@@ -945,6 +961,24 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * @param response current HTTP response
 	 * @throws Exception in case of any kind of processing failure
 	 */
+	/**
+	 * @param request
+	 * @param response
+	 * @throws Exception
+	 *
+	 * springmvc 第三步 接口调用，最终会调用到这里
+	 * 首先：声明一个handler有三种方式：
+	 *  1.@Controller注解
+	 *  2.实现Controller接口
+	 *  3.实现HttpRequestHandler接口
+	 *
+	 *  mappedHandler = getHandler(processedRequest);
+	 *   是根据request请求判断是要哪个HandlerMapping来处理，然后返回一个拦截器链；
+	 *   web默认的有两个
+	 *    BeanNameUrlHandlerMapping :用来处理第二种和第三种方式
+	 *    RequestMappingHandlerMapping：用来处理第一种方式的controller(在springmvc中，controller就是handler)
+	 *
+	 */
 	protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
 		HttpServletRequest processedRequest = request;
 		HandlerExecutionChain mappedHandler = null;
@@ -983,6 +1017,7 @@ public class DispatcherServlet extends FrameworkServlet {
 					}
 				}
 
+				//在调用目标方法之前调用拦截器
 				if (!mappedHandler.applyPreHandle(processedRequest, response)) {
 					return;
 				}

@@ -505,6 +505,7 @@ public class BeanDefinitionParserDelegate {
 
 		String className = null;
 		if (ele.hasAttribute(CLASS_ATTRIBUTE)) {
+			//获取xml中bean节点配置的class(就是类的全类名)
 			className = ele.getAttribute(CLASS_ATTRIBUTE).trim();
 		}
 		String parent = null;
@@ -516,13 +517,17 @@ public class BeanDefinitionParserDelegate {
 			//根据全类名，通过反射
 			AbstractBeanDefinition bd = createBeanDefinition(className, parent);
 
+			//解析<bean>节点的属性信息，比如：lazy/autowire/scope/destroy-method/init-method等，然后把解析到的属性set到beanDefinition中
 			parseBeanDefinitionAttributes(ele, beanName, containingBean, bd);
+			//解析bean的子节点 <description>的信息
 			bd.setDescription(DomUtils.getChildElementValueByTagName(ele, DESCRIPTION_ELEMENT));
 
 			parseMetaElements(ele, bd);
+			//下面两个方法分别解析<bean>的子节点 lookup-method和replaced-method
 			parseLookupOverrideSubElements(ele, bd.getMethodOverrides());
 			parseReplacedMethodSubElements(ele, bd.getMethodOverrides());
 
+			//解析bean的构造函数，最后调用的是bd.getConstructorArgumentValues().addGenericArgumentValue(valueHolder);
 			parseConstructorArgElements(ele, bd);
 			parsePropertyElements(ele, bd);
 			parseQualifierElements(ele, bd);

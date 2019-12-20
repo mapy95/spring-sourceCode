@@ -569,7 +569,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// Register bean processors that intercept bean creation.
 				/**
 				 *  注册beanPostProcessor;方法里面
-				 *  会先把beanPostProcessor进行分类，然后按照beanPostProcessor的name从spring容器中获取bean对象，如果spring容器中没有，就创建
+				 *  会先把beanPostProcessor进行分类，然后按照beanPostProcessor的name从spring容器中获取bean对象，如果spring容器中没有，就创建;所以如果一个beanDefinition是后置处理器，会这这里进行实例化，然后存放到单实例池中
 				 *  然后再调用的是 beanFactory.addBeanPostProcessor(postProcessor);
 				 * 把所有的beanPostProcessor放到了beanPostProcessors中，在后面初始化bean的时候，如果需要调用后置处理器，就会遍历这个list，
 				 */

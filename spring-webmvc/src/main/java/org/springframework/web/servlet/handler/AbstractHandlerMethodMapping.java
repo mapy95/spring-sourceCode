@@ -195,6 +195,10 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	 * @see #detectHandlerMethods
 	 * @see #handlerMethodsInitialized
 	 */
+	/**
+	 * 在初始化时，会调到这里，然后会获取到beanDefinitionMap中的bean，判断当前bean是否是@Controller或者@RequestMapping修饰的类
+	 * 如果是，就调用detectHandlerMethods方法
+	 */
 	protected void initHandlerMethods() {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Looking for request mappings in application context: " + getApplicationContext());
@@ -227,6 +231,10 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	 * Look for handler methods in the specified handler bean.
 	 * @param handler either a bean name or an actual handler instance
 	 * @see #getMappingForMethod
+	 */
+	/**
+	 * @param handler
+	 * 在这里其实是根据bean,获取到bean中所有添加了@RequestMapping注解的method，然后把method和url进行映射，并把映射关系存到map中
 	 */
 	protected void detectHandlerMethods(Object handler) {
 		Class<?> handlerType = (handler instanceof String ?
@@ -505,6 +513,15 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 		 * Return matches for the given URL path. Not thread-safe.
 		 * @see #acquireReadLock()
 		 */
+		/**
+		 * @param urlPath
+		 * @return
+		 *
+		 * Controller有两种配置方式
+		 * @Controller  @RequestMapping：这种情况，用的是urlLookUp这个map
+		 * 另外一种是实现Controller接口，然后用的是:
+		 *  org.springframework.web.servlet.handler.AbstractUrlHandlerMapping#lookupHandler(java.lang.String, javax.servlet.http.HttpServletRequest)中的 handlerMap
+		 */
 		@Nullable
 		public List<T> getMappingsByUrl(String urlPath) {
 			return this.urlLookup.get(urlPath);
@@ -542,6 +559,12 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 		public void register(T mapping, Object handler, Method method) {
 			this.readWriteLock.writeLock().lock();
 			try {
+				/**
+				 * 对于@Controller这种类型的handler，
+				 * 存储了两个map
+				 *  mappingLookup存储的是mapping和处理方法  handlerMethod就是(com.xxx.controller.method)
+				 *  urlLookup 存储的是URL和mapping
+				 */
 				HandlerMethod handlerMethod = createHandlerMethod(handler, method);
 				assertUniqueMethodMapping(handlerMethod, mapping);
 				this.mappingLookup.put(mapping, handlerMethod);

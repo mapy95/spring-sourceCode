@@ -246,6 +246,16 @@ public abstract class AopUtils {
 		for (Class<?> clazz : classes) {
 			Method[] methods = ReflectionUtils.getAllDeclaredMethods(clazz);
 			for (Method method : methods) {
+				/**
+				 * 事务会调用methodMatcher,matches()方法
+				 * 里面会调用这个方法
+				 *  org.springframework.transaction.interceptor.TransactionAttributeSourcePointcut#matches(java.lang.reflect.Method, java.lang.Class)
+				 *最后会调用org.springframework.transaction.annotation.SpringTransactionAnnotationParser#parseTransactionAnnotation(java.lang.reflect.AnnotatedElement)这个方法，来判断当前method是否有事务注解信息
+				 *
+				 * AOP
+				 * 调用的是introductionAwareMethodMatcher.matches(method, targetClass, hasIntroductions)方法
+				 * org.springframework.aop.aspectj.AspectJExpressionPointcut#matches(java.lang.reflect.Method, java.lang.Class, boolean)
+				 */
 				if (introductionAwareMethodMatcher != null ?
 						introductionAwareMethodMatcher.matches(method, targetClass, hasIntroductions) :
 						methodMatcher.matches(method, targetClass)) {
