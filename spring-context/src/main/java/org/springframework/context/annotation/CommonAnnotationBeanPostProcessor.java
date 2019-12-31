@@ -519,6 +519,10 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 			}
 		}
 		else {
+			/**
+			 * 之所以说@Resource是按照name来注入的，就是这里的代码可以佐证这个观点
+			 *
+			 */
 			resource = factory.getBean(name, element.lookupType);
 			autowiredBeanNames = Collections.singleton(name);
 		}
@@ -621,6 +625,14 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 			this.lazyLookup = (lazy != null && lazy.value());
 		}
 
+		/**
+		 * @param target
+		 * @param requestingBeanName
+		 * @return
+		 *
+		 * @Resource注解源码解析：
+		 *   在这里，会执行到getResource()方法；这里的this就是controller中注入的service的属性名
+		 */
 		@Override
 		protected Object getResourceToInject(Object target, @Nullable String requestingBeanName) {
 			return (this.lazyLookup ? buildLazyResourceProxy(this, requestingBeanName) :

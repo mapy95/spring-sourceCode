@@ -142,10 +142,19 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	 * attribute does not match.
 	 * @see Qualifier
 	 */
+	/**
+	 * @param bdHolder
+	 * @param descriptor
+	 * @return
+	 *
+	 * 在使用@Autowired注解注入接口的时候，如果有多个实现类，可以使用@Qualifier注解指定要注入的实现类的beanName，会在这个方法中
+	 * 判断当前属性是否有添加qualifier注解
+	 */
 	@Override
 	public boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
 		boolean match = super.isAutowireCandidate(bdHolder, descriptor);
 		if (match) {
+			//这里传过来的descriptor就是要注入的属性类型，获取到属性上对应的注解
 			match = checkQualifiers(bdHolder, descriptor.getAnnotations());
 			if (match) {
 				MethodParameter methodParam = descriptor.getMethodParameter();

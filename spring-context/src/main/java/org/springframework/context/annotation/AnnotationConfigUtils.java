@@ -241,6 +241,13 @@ public class AnnotationConfigUtils {
 		processCommonDefinitionAnnotations(abd, abd.getMetadata());
 	}
 
+	/**
+	 * @param abd
+	 * @param metadata
+	 *
+	 * @Autowired注解源码 一
+	 *  在扫描bean的时候，会判断当前bean是否添加了@Primary注解，如果添加了，会设置beanDefinition的primary属性为true或者false
+	 */
 	static void processCommonDefinitionAnnotations(AnnotatedBeanDefinition abd, AnnotatedTypeMetadata metadata) {
 		AnnotationAttributes lazy = attributesFor(metadata, Lazy.class);
 		if (lazy != null) {

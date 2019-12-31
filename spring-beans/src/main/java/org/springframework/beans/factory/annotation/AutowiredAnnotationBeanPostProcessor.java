@@ -269,7 +269,9 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		// Quick check on the concurrent map first, with minimal locking.
 		/**
 		 * 每个类的构造函数，spring都会解析一遍，解析之后，保存下来，下次再使用时，无需重复解析；定义一个存放构造函数的数组
+		 * candidateConstructorsCache 解析完之后，就把推断出来的构造函数存到了这个map中
 		 *
+		 * 这里用的是DCL模式
 		 */
 		Constructor<?>[] candidateConstructors = this.candidateConstructorsCache.get(beanClass);
 		if (candidateConstructors == null) {
@@ -280,7 +282,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 				if (candidateConstructors == null) {
 					Constructor<?>[] rawCandidates;
 					try {
-						//拿到bean所有的构造函数
+						//拿到beanClass 所有的构造函数
 						rawCandidates = beanClass.getDeclaredConstructors();
 					}
 					catch (Throwable ex) {
@@ -291,18 +293,21 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 					/**
 					 * 这里代码写的挺巧妙的，rawCandidates是当前bean所有的构造函数；candidates是推断出来可用的构造函数，candidates的长度最大不会超过当前
 					 * bean所有构造函数的和
+					 *
+					 * candidates是当前可用的构造函数
 					 */
 					List<Constructor<?>> candidates = new ArrayList<>(rawCandidates.length);
 					/**
 					 * requiredConstructor: 必要的
-					 * defaultConstructor： 默认的
-					 * primaryConstructor
+					 * defaultConstructor： 默认的(如果没有推断出来，就用空参构造函数)
+					 * primaryConstructor: 这个和kotlin有点关系
 					 */
 					Constructor<?> requiredConstructor = null;
 					Constructor<?> defaultConstructor = null;
 					Constructor<?> primaryConstructor = BeanUtils.findPrimaryConstructor(beanClass);
 					//nonSyntheticConstructors:这个变量是用来
 					int nonSyntheticConstructors = 0;
+					//遍历当前bean的所有构造函数
 					for (Constructor<?> candidate : rawCandidates) {
 						//判断当前构造方法是否是混合构造方法
 						if (!candidate.isSynthetic()) {
@@ -315,7 +320,11 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 						AnnotationAttributes ann = findAutowiredAnnotation(candidate);
 						if (ann == null) {
 							Class<?> userClass = ClassUtils.getUserClass(beanClass);
-							//判断构造方法对应的类和传过来的类是否是同一个
+							/**
+							 * 判断构造方法对应的类和传过来的类是否是同一个
+							 * 这里应该是防止当前bean是一个被代理的对象
+							 * 上面的userClass中判断beanClass是否包含 $$；如果包含，说明是代理对象
+							 */
 							if (userClass != beanClass) {
 								try {
 									Constructor<?> superCtor =
@@ -328,6 +337,10 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 							}
 						}
 						if (ann != null) {
+							/**
+							 * 如果ann不为null(表示当前bean中的构造函数中有加@Autowired)，如果有多个构造函数都加了@Autowired，
+							 * 就会抛出异常
+							 */
 							if (requiredConstructor != null) {
 								throw new BeanCreationException(beanName,
 										"Invalid autowire-marked constructor: " + candidate +
@@ -365,6 +378,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 						}
 						candidateConstructors = candidates.toArray(new Constructor<?>[0]);
 					}
+					//如果只有一个构造函数，并且构造函数的入参大于0，就用这一个
 					else if (rawCandidates.length == 1 && rawCandidates[0].getParameterCount() > 0) {
 						candidateConstructors = new Constructor<?>[] {rawCandidates[0]};
 					}
@@ -592,7 +606,15 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 			this.required = required;
 		}
 
-		//这是处理属性注入的方法 @Autowired
+		/**
+		 * @param bean
+		 * @param beanName
+		 * @param pvs
+		 * @throws Throwable
+		 *
+		 * @Autowired注解源码 二
+		 *  这是主要是处理属性注入的方法 @Autowired
+		 */
 		@Override
 		protected void inject(Object bean, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
 			//field是当前bean依赖的bean对象，比如A中注入了B，那这里的field就是 private com.xxxx.B com.XXX.A.b

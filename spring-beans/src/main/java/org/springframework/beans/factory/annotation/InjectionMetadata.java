@@ -176,6 +176,13 @@ public class InjectionMetadata {
 		protected void inject(Object target, @Nullable String requestingBeanName, @Nullable PropertyValues pvs)
 				throws Throwable {
 
+			/**
+			 * @Resource源码解析：
+			 *  首先会判断isField是否成立，this.isField = (member instanceof Field);
+			 *  具体的处理逻辑在
+			 *    getResourceToInject(target, requestingBeanName)
+			 *     这里的target就是controller，requestingBeanName是当前beanName，controller
+			 */
 			if (this.isField) {
 				Field field = (Field) this.member;
 				ReflectionUtils.makeAccessible(field);

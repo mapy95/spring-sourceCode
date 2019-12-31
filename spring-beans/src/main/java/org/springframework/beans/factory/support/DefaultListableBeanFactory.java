@@ -1103,7 +1103,14 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				return multipleBeans;
 			}
 
-			//查找要注入的bean，按照type来查找
+			/**
+			 * @Autowired注解源码 三
+			 *  查找要注入的bean，按照type来查找，如果匹配到一个，就获取到这个实例，然后返回，返回之后，会调用field.set();注入进去
+			 *  如果找到了多个，那就先判断哪个实现类有@primary注解，如果都没有注解，那就判断priority的优先级
+			 *
+			 *  这个方法中，对Qualifier注解进行了处理；如果一个接口有多个实现类，但是没有加@Qualifier注解，那么就会返回多个
+			 *
+			 */
 			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, type, descriptor);
 			if (matchingBeans.isEmpty()) {
 				if (isRequired(descriptor)) {
@@ -1116,6 +1123,17 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			Object instanceCandidate;
 
 			if (matchingBeans.size() > 1) {
+				/**
+				 * 如果根据类型，匹配到有多个bean，那就判断@Primary注解和@Priority注解；
+				 *  所以：可以得出一个结论：
+				 * 	  当一个接口有多个实现类的时候，添加了@Qualifier注解，同时在一个类上添加了@Primary注解，那么会注入@Qualifier注解对应的bean
+				 *
+				 * 	在下面的这个推断方法中：
+				 * 	 1.会先判断@Primary注解
+				 * 	 2.再判断@Priority注解声明的优先级
+				 * 	 3.如果两个注解都没有，那就根据controller中注入的service的name和matchingBeans中的beanName进行匹配
+				 * 	   如果匹配上，就注入匹配上的beanName对应的beanClass
+				 */
 				autowiredBeanName = determineAutowireCandidate(matchingBeans, descriptor);
 				if (autowiredBeanName == null) {
 					if (isRequired(descriptor) || !indicatesMultipleBeans(type)) {
@@ -1128,6 +1146,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 						return null;
 					}
 				}
+				//如果能找到一个，那就根据name获取到对应的instance实例，然后再field.set();
 				instanceCandidate = matchingBeans.get(autowiredBeanName);
 			}
 			else {
@@ -1279,6 +1298,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	protected Map<String, Object> findAutowireCandidates(
 			@Nullable String beanName, Class<?> requiredType, DependencyDescriptor descriptor) {
 
+		//根据类型，获取到当前容器中的beanName
 		String[] candidateNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 				this, requiredType, true, descriptor.isEager());
 		Map<String, Object> result = new LinkedHashMap<>(candidateNames.length);
@@ -1292,6 +1312,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				}
 			}
 		}
+		/**
+		 * 确切的说，是在isAutowireCandidate里面对Qualifier注解进行了判断
+		 *  org.springframework.beans.factory.annotation.QualifierAnnotationAutowireCandidateResolver#isAutowireCandidate(org.springframework.beans.factory.config.BeanDefinitionHolder, org.springframework.beans.factory.config.DependencyDescriptor)
+		 *  如果
+		 */
 		for (String candidate : candidateNames) {
 			if (!isSelfReference(beanName, candidate) && isAutowireCandidate(candidate, descriptor)) {
 				addCandidateEntry(result, candidate, descriptor, requiredType);
@@ -1349,15 +1374,28 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	@Nullable
 	protected String determineAutowireCandidate(Map<String, Object> candidates, DependencyDescriptor descriptor) {
 		Class<?> requiredType = descriptor.getDependencyType();
+		//判断哪个bean有@Primary注解，返回注解对应的beanName
 		String primaryCandidate = determinePrimaryCandidate(candidates, requiredType);
 		if (primaryCandidate != null) {
 			return primaryCandidate;
 		}
+		//如果都没有添加@Primary注解，那就判断bean是否有添加@Priority注解，注解值越小，优先级越高；返回优先级高的beanName
 		String priorityCandidate = determineHighestPriorityCandidate(candidates, requiredType);
 		if (priorityCandidate != null) {
 			return priorityCandidate;
 		}
 		// Fallback
+		/**
+		 * 这里的descriptor中保存的是注入的bean对应的名称(在controller注入service，这里就是controller中的service属性名)
+		 * 判断 从容器中拿出来的beanName是否和controller中的service属性名一致，如果一致，就注入一致的这个
+		 *  这也就是在controller注入service的时候，如果service有多个实现类，那么，如果注入的service属性名和实现类的名字一致，也可以注入成功的原因
+		 *
+		 *  class Controller{
+		 * @Autowired
+		 * Service service01
+		 *  }
+		 *   如果service有多个实现类，其实注入的是service01，就是这里判断的
+		 */
 		for (Map.Entry<String, Object> entry : candidates.entrySet()) {
 			String candidateName = entry.getKey();
 			Object beanInstance = entry.getValue();
