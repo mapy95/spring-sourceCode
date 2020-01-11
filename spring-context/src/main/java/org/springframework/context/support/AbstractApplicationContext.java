@@ -777,9 +777,6 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		 *
 		 * 简单而言，这里说的自定义是指：程序员自己的bean，并且没有加@Component注解的类；（手动添加到spring容器中的）如果没有加注解，怎么交给spring呢？
 		 * 在调用annotationConfigApplicationContext的refresh()方法之前  将自定义的beanFactoryPostProcessor添加到容器ac中
-		 *
-		 *
-		 *
 		 */
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 

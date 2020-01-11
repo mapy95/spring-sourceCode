@@ -96,7 +96,7 @@ class ConfigurationClassEnhancer {
 	 * @return the enhanced subclass
 	 */
 	public Class<?> enhance(Class<?> configClass, @Nullable ClassLoader classLoader) {
-		//判断configClass是否被代理过
+		//判断configClass是否被代理过,  A.class.isAssignabeFrom(B)是判断B类是否是A类的子类
 		if (EnhancedConfiguration.class.isAssignableFrom(configClass)) {
 			if (logger.isDebugEnabled()) {
 				logger.debug(String.format("Ignoring request to enhance %s as it has " +
@@ -108,7 +108,10 @@ class ConfigurationClassEnhancer {
 			}
 			return configClass;
 		}
-		//如果configClass没有被代理过没救开始CGLIB代理
+		/**
+		 * 如果configClass没有被代理过，就开始CGLIB代理
+		 * configClass是原来的bean，enhancedClass是被代理之后的bean
+		 */
 		Class<?> enhancedClass = createClass(newEnhancer(configClass, classLoader));
 		if (logger.isDebugEnabled()) {
 			logger.debug(String.format("Successfully enhanced %s; enhanced class name is: %s",

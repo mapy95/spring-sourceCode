@@ -536,6 +536,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		AnnotationMetadata metadata = beanDefinition.getMetadata();
 		/**
 		 * 当前bean不是接口，不是抽象类，或者当前bean是抽象类，并且同时有lookup注解修饰，就可以注入到spring容器中
+		 *
+		 * spring在扫描普通bean，是用的这个方法，mybatis对该方法进行了扩展，mybatis判断一个beanDefinition是否要放到beanDefinitionMap中，是判断当前是否是接口，是否是顶级类
+		 *
+		 * isIndependent：当前类是否独立(顶级类或者嵌套类)
+		 *
 		 */
 		return (metadata.isIndependent() && (metadata.isConcrete() ||
 				(metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName()))));

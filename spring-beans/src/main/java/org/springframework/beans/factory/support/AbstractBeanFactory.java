@@ -299,7 +299,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 			}
 
-			//添加到alreadyCreated集合当中，表示当前bean已经创建过一次了
+			//添加到alreadyCreated集合当中，表示当前bean正在被创建，在注册bean(将beanDefinition存入到beanDefinitionMap中的时候，会判断)
 			if (!typeCheckOnly) {
 				markBeanAsCreated(beanName);
 			}

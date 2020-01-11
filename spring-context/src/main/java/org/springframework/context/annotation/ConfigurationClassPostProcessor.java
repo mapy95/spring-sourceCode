@@ -271,9 +271,13 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		String[] candidateNames = registry.getBeanDefinitionNames();
 
 		for (String beanName : candidateNames) {
-			//获取所有的beanName,从beanDefinitionMap中获取beanDefinition
+			/**
+			 * 根据beanName,从beanDefinitionMap中获取beanDefinition
+			 * 这里代码的意思是要获取到所有的配置类
+			 * 换言之，这里的configCandidates中保存了所有的配置类(@Configuration)
+			 */
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
-			//如果bean是注解版的，就是full，否则就是lite
+			//如果bean配置类，就是full，否则就是lite
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef) ||
 					ConfigurationClassUtils.isLiteConfigurationClass(beanDef)) {
 				if (logger.isDebugEnabled()) {
@@ -399,6 +403,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		Map<String, AbstractBeanDefinition> configBeanDefs = new LinkedHashMap<>();
 		for (String beanName : beanFactory.getBeanDefinitionNames()) {
 			BeanDefinition beanDef = beanFactory.getBeanDefinition(beanName);
+			/**
+			 * 判断当前beanDefinition是否是 配置类，通过ConfigurationClass的值来判断，在扫描bean的时候，会对bean进行判断
+			 * 如果当前bean添加了@Configuration注解，就将该属性设置为full，否则就设置为lite
+			 */
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef)) {
 				if (!(beanDef instanceof AbstractBeanDefinition)) {
 					throw new BeanDefinitionStoreException("Cannot enhance @Configuration bean definition '" +

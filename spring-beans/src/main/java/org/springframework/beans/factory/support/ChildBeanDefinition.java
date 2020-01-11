@@ -46,6 +46,7 @@ import org.springframework.util.ObjectUtils;
 @SuppressWarnings("serial")
 public class ChildBeanDefinition extends AbstractBeanDefinition {
 
+	//这里的parentName只能通过构造方法，在初始化ChildBeanDefinition的时候传进来
 	@Nullable
 	private String parentName;
 

@@ -589,7 +589,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				logger.debug("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
-			//mpy 第四次调用后置处理器 获取一个提前暴露的对象 objectFactory 用来解决循环依赖
+			/**
+			 * mpy 第四次调用后置处理器 获取一个提前暴露的对象 objectFactory 用来解决循环依赖
+			 * 这里还有一个关键的作用，可以追进去看一下，这里可能会完成动态代理对象的生成(AOP)
+			 * 正常情况下，AOP的动态代理是在调用org.springframework.beans.factory.config.BeanPostProcessor#postProcessAfterInitialization(java.lang.Object, java.lang.String)的时候，才会生成
+			 * 但是，如果是循环依赖的话，会在 org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference(java.lang.Object, java.lang.String) 中完成
+			 */
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 

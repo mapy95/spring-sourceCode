@@ -131,6 +131,11 @@ public class InitDestroyAnnotationBeanPostProcessor
 
 	@Override
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+		/**
+		 * 在初始化bean的时候，会在这里处理注解的初始化方法 @PostConstruct
+		 * 从cache中获取到当前bean的元对象
+		 * 在invokeInitMethods方法中，就是
+		 */
 		LifecycleMetadata metadata = findLifecycleMetadata(bean.getClass());
 		try {
 			metadata.invokeInitMethods(bean, beanName);
@@ -175,6 +180,17 @@ public class InitDestroyAnnotationBeanPostProcessor
 	}
 
 
+	/**
+	 * @param clazz
+	 * @return
+	 *
+	 * 在spring生命周期中的第三个后置处理器，会调用这个方法，将当前bean的初始化方法和销毁方法，获取到
+	 *  method.isAnnotationPresent(this.initAnnotationType)
+	 *  method.isAnnotationPresent(this.destroyAnnotationType)
+	 *
+	 *  然后根据初始化方法，创建一个元对象，然后将元对象存到了lifecycleMetadataCache中
+	 *
+	 */
 	private LifecycleMetadata findLifecycleMetadata(Class<?> clazz) {
 		if (this.lifecycleMetadataCache == null) {
 			// Happens after deserialization, during destruction...

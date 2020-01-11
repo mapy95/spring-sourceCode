@@ -53,12 +53,15 @@ import org.springframework.util.Assert;
 @SuppressWarnings("serial")
 public class RootBeanDefinition extends AbstractBeanDefinition {
 
+	//beanDefinition的持有者
 	@Nullable
 	private BeanDefinitionHolder decoratedDefinition;
 
+	//Java反射信息
 	@Nullable
 	private AnnotatedElement qualifiedElement;
 
+	//是否允许被缓存
 	boolean allowCaching = true;
 
 	boolean isFactoryMethodUnique = false;
