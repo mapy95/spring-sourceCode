@@ -71,7 +71,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		 * AutowiredAnnotationBeanPostProcessor
 		 * ConfigurationClassPostProcessor
 		 *
-		 * 这里的reader主要完成了对配置类(@Configuration)的处理，将配置类添加到beanDEfinitionMap中；
+		 * 这里的reader主要完成了对配置类(@Configuration)的处理，将配置类添加到beanDefinitionMap中；
 		 * 后面将普通bean扫描到beanDefinitionMap的时候，用的是另外new出来的scanner，并根据.class文件new出来一个ScannedGenericBeanDefinition对象
 		 */
 		this.reader = new AnnotatedBeanDefinitionReader(this);
@@ -80,7 +80,8 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		 * 实际上完成包扫描并不是这里的scanner完成的。而是spring自己new的一个ClassPathBeanDefinitionScanner完成的
 		 * 这里的scanner是为了程序员能够在外部调用annotationConfigApplicationbContext对象,简单而言，spring遵循了开闭原则
 		 *
-		 * 这个方法里面的registerDefaultFilters这个方法也比较重要(这个方法有两个集合变量：includeFilters和excludeFilters)，在后面将bean放到beanDefinitionMap的时候，有用到这个地方
+		 * 这个方法里面的registerDefaultFilters这个方法也比较重要(这个方法有两个集合变量：includeFilters和excludeFilters)，
+		 *   在后面将class扫描出来并放到beanDefinitionMap的时候，有用到这个地方
 		 * registerDefaultFilters 这个方法，向一个list(includeFilters)中添加了三个值
 		 *   Component.class
 		 *   javax.annotation.ManagedBean

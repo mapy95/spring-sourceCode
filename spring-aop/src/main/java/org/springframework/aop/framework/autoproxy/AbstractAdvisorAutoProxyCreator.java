@@ -91,7 +91,7 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	 * @see #extendAdvisors
 	 */
 	protected List<Advisor> findEligibleAdvisors(Class<?> beanClass, String beanName) {
-		//find当前所有的通知方法
+		//TODO find当前所有的通知方法;这里返回的是所有的通知方法,后面再细看
 		List<Advisor> candidateAdvisors = findCandidateAdvisors();
 		//find当前bean可用的通知方法
 		List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);

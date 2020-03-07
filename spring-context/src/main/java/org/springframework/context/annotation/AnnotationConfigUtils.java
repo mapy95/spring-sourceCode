@@ -159,7 +159,8 @@ public class AnnotationConfigUtils {
 		Set<BeanDefinitionHolder> beanDefs = new LinkedHashSet<>(8);
 
 		/**
-		 * RootBeanDefinition  可以简单理解为 RootBeanDefinition 是保存spring自己内部类的beanDefinition
+		 * RootBeanDefinition ：可以简单理解为 RootBeanDefinition 是保存spring自己内部类的beanDefinition
+		 * 这里是在sprig初始化bean流程之前，先注入了几个beanFactoryPostProcessor 和 beanPostProcessor
 		 */
 		if (!registry.containsBeanDefinition(CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME)) {
 			RootBeanDefinition def = new RootBeanDefinition(ConfigurationClassPostProcessor.class);

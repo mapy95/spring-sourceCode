@@ -1056,6 +1056,21 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * @param mbd the bean definition for the bean
 	 * @return the shortcut-determined bean instance, or {@code null} if none
 	 */
+	/**
+	 * @param beanName
+	 * @param mbd
+	 * @return
+	 * 这里面比较重要的变量：
+	 *  beforeInstantiationResolved：
+	 *  isSynthetic():
+	 *   synthetic
+	 *    和spring中的合成类、合成方法、合成属性有关系
+	 *
+	 *  这里的意思是：在开始spring生命周期方法之前，先判断是否返回了bean对象，如果返回了，就不再调用bean的声明周期方法
+	 *   进行判断的前提是：当前bean不是合成类，并且当前spring容器中有InstantiationAwareBeanPostProcessor的实现类
+	 *   hasInstantiationAwareBeanPostProcessor是在refresh方法中，执行 registerBeanPostProcessors()方法的时候，
+	 *   会把bean的后置处理器添加到 beanFactory中，添加的时候，会判断当前bean是否是接口的实现类
+	 */
 	@Nullable
 	protected Object resolveBeforeInstantiation(String beanName, RootBeanDefinition mbd) {
 		Object bean = null;
@@ -1145,6 +1160,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		boolean autowireNecessary = false;
 		if (args == null) {
 			synchronized (mbd.constructorArgumentLock) {
+				//如果bean是prototype，那么第二次获取bean的时候，会从这里来获取
 				if (mbd.resolvedConstructorOrFactoryMethod != null) {
 					resolved = true;
 					autowireNecessary = mbd.constructorArgumentsResolved;

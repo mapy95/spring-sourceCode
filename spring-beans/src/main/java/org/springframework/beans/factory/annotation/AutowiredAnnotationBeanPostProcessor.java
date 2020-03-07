@@ -291,8 +291,8 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 								"] from ClassLoader [" + beanClass.getClassLoader() + "] failed", ex);
 					}
 					/**
-					 * 这里代码写的挺巧妙的，rawCandidates是当前bean所有的构造函数；candidates是推断出来可用的构造函数，candidates的长度最大不会超过当前
-					 * bean所有构造函数的和
+					 * 这里代码写的挺巧妙的，rawCandidates是当前bean所有的构造函数；candidates是推断出来可用的构造函数，
+					 * candidates的长度最大不会超过当前bean所有构造函数的和
 					 *
 					 * candidates是当前可用的构造函数
 					 */
@@ -304,6 +304,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 					 */
 					Constructor<?> requiredConstructor = null;
 					Constructor<?> defaultConstructor = null;
+					//这里应该和kotlin有关系
 					Constructor<?> primaryConstructor = BeanUtils.findPrimaryConstructor(beanClass);
 					//nonSyntheticConstructors:这个变量是用来
 					int nonSyntheticConstructors = 0;

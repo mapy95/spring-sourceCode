@@ -186,7 +186,11 @@ final class PostProcessorRegistrationDelegate {
 
 		// Do not initialize FactoryBeans here: We need to leave all regular beans
 		// uninitialized to let the bean factory post-processors apply to them!
-		//这里的是程序员提供的beanFactoryPostProcessor的实现类，是通过@Component注解提供的，而不是ac.addBeanFactoryPostProcessor提供的
+		/**
+		 * 这里的是程序员提供的beanFactoryPostProcessor的实现类，是通过@Component注解提供的，而不是ac.addBeanFactoryPostProcessor提供的
+		 *
+		 * 上面执行的，仅仅是程序员通过add到spring容器中的beanFactoryPostProcessor
+		 */
 		String[] postProcessorNames =
 				beanFactory.getBeanNamesForType(BeanFactoryPostProcessor.class, true, false);
 

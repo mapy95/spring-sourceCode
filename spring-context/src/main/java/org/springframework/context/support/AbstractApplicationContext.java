@@ -558,8 +558,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				 * 7.获取每个包下面的 *.class文件，registerBeanDefinition(definitionHolder, this.registry); 这个方法底层就是调用org.springframework.beans.factory.support.DefaultListableBeanFactory#registerBeanDefinition方法  把当前bean put到beanDefinitionMap中
 				 *
 				 * 二、是通过@Import注解注入的bean
+				 *     ImportBeanDefinitionRegistrar
+				 *     ImportSelector
 				 *
-				 * 三、ImportBeanDefinitionRegistrar注入的bean
+				 * 三、@Bean注解
+				 *
 				 *
 				 *
 				 * spring在把bean注入到beanDefinitionMaps的同时，会将当前beanName添加到一个list中 beanDefinitionNames,这个list和beanDefinitionMap是同时进行添加的，这个list在后面实例化bean的时候有用到，spring是遍历这个list，拿到每个beanName之后，从beanDefinitionMap中取到对应的beanDefinition

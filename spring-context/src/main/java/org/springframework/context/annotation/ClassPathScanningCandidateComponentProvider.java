@@ -203,6 +203,12 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 *
 	 */
 	@SuppressWarnings("unchecked")
+	/**
+	 * includeFilter在后面将class扫描出来，判断是否需要添加到beanDefinitionMap的时候，有用到这个list
+	 *  需要注意的是
+	 * @Controller @Service @Repository 都是继承了 @Componenet注解
+	 *
+	 */
 	protected void registerDefaultFilters() {
 		this.includeFilters.add(new AnnotationTypeFilter(Component.class));
 		ClassLoader cl = ClassPathScanningCandidateComponentProvider.class.getClassLoader();

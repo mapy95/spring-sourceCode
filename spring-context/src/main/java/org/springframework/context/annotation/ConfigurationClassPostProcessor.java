@@ -277,14 +277,17 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			 * 换言之，这里的configCandidates中保存了所有的配置类(@Configuration)
 			 */
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
-			//如果bean配置类，就是full，否则就是lite
+			/**
+			 * 如果bean配置类，就是full，否则就是lite
+			 * 这里，如果当前bean 的configurationClass属性已经被设置值了，说明当前bean已经被解析过来，就无需再次解析
+			 */
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef) ||
 					ConfigurationClassUtils.isLiteConfigurationClass(beanDef)) {
 				if (logger.isDebugEnabled()) {
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
 			}
-			//校验bean是否包含@Configuration  也就是校验bean是哪种配置类？注解？还是普通的配置类   待验证  spring如何将一个对象创建为beanDefinition？
+			//校验bean是否包含@Configuration  也就是校验bean是哪种配置类？注解？还是普通的配置类
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
 			}
