@@ -1155,6 +1155,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		/**
 		 *
 		 * 当多次构建同一个bean的时候，可以使用这个shortcut。
+		 * 也就是说，如果第一次解析一个bean，推断出来
 		 */
 		boolean resolved = false;
 		boolean autowireNecessary = false;

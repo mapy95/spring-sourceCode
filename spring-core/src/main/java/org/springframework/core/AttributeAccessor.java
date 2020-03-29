@@ -25,6 +25,11 @@ import org.springframework.lang.Nullable;
  * @author Rob Harrop
  * @since 2.0
  */
+
+/**
+ * org.springframework.core.AttributeAccessorSupport#attributes
+ * attributeAccessor是用来描述beanDefinition的元数据，数据是存在上面的这个map中
+ */
 public interface AttributeAccessor {
 
 	/**

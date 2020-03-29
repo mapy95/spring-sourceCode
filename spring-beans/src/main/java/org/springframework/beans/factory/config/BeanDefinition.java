@@ -158,6 +158,8 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 	String[] getDependsOn();
 
 	/**
+	 * 当前属性是设置当前bean是否参与自动注入，默认是true，如果是false的话，在属性注入的时候，不会优先选这个
+	 * 与之对应的是primary，设置当前bean优先注入
 	 * Set whether this bean is a candidate for getting autowired into some other bean.
 	 * <p>Note that this flag is designed to only affect type-based autowiring.
 	 * It does not affect explicit references by name, which will get resolved even

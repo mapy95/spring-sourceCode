@@ -234,6 +234,13 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		return null;
 	}
 
+	/**
+	 * 如果是循环依赖，会在这里提前生成AOP代理对象
+	 * @param bean the raw bean instance
+	 * @param beanName the name of the bean
+	 * @return
+	 * @throws BeansException
+	 */
 	@Override
 	public Object getEarlyBeanReference(Object bean, String beanName) throws BeansException {
 		Object cacheKey = getCacheKey(bean.getClass(), beanName);
@@ -385,8 +392,9 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	 * @see org.springframework.aop.Advisor
 	 * @see org.springframework.aop.framework.AopInfrastructureBean
 	 * @see #shouldSkip
+	 *
+	 * 判断当前bean是否是Advice/pointcut...的子类;如果是，就返回false，不需要被代理
 	 */
-	//判断当前bean是否是Advice/pointcut...的子类
 	protected boolean isInfrastructureClass(Class<?> beanClass) {
 		boolean retVal = Advice.class.isAssignableFrom(beanClass) ||
 				Pointcut.class.isAssignableFrom(beanClass) ||

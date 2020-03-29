@@ -278,7 +278,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			 */
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
 			/**
-			 * 如果bean配置类，就是full，否则就是lite
+			 * 如果bean是配置类，就是full，否则就是lite
 			 * 这里，如果当前bean 的configurationClass属性已经被设置值了，说明当前bean已经被解析过来，就无需再次解析
 			 */
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef) ||

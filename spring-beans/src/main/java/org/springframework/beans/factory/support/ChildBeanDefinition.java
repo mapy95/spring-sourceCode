@@ -42,11 +42,15 @@ import org.springframework.util.ObjectUtils;
  * @author Juergen Hoeller
  * @see GenericBeanDefinition
  * @see RootBeanDefinition
+ * 一般使用childBeanDefinition是确定了父子关系的beanDefinition，在spring2.5之前，是配合RootBeanDefinition来使用的，但是
+ * 现在，可以不这么做了，因为genericBeanDefinition已经通用了
  */
 @SuppressWarnings("serial")
 public class ChildBeanDefinition extends AbstractBeanDefinition {
 
-	//这里的parentName只能通过构造方法，在初始化ChildBeanDefinition的时候传进来
+	/**
+	 * 这里的parentName只能通过构造方法，在初始化ChildBeanDefinition的时候传进来,表示的是parentBeanDefinition的名字
+	 */
 	@Nullable
 	private String parentName;
 

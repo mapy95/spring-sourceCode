@@ -89,6 +89,9 @@ abstract class ConfigurationClassUtils {
 		 * 如果bean是注解版的，就调用AnnotatedBeanDefinition获取元数据
 		 * 如果是非注解的，就用AbstractBeanDefinition获取元数据
 		 *
+		 * 如果一个类是配置类，那么在初始化的时候，spring是通过this.reader.registry()来将配置类注入到beanDefinitionMap中的
+		 * 所以，配置类(AppConfig)对应的beanDefinition是AnnotatedBeanDefinition类型的
+		 *
 		 */
 		if (beanDef instanceof AnnotatedBeanDefinition &&
 				className.equals(((AnnotatedBeanDefinition) beanDef).getMetadata().getClassName())) {

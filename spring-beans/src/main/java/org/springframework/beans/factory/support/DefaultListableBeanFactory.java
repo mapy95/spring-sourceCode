@@ -736,7 +736,13 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		//触发所有非延迟加载单实例bean的加载，加载的过程就是调用getBean()方法  上面获取到的是所有的beanName
 		for (String beanName : beanNames) {
 			/**
-			 * 合并父类beanDefinition
+			 * 合并父类beanDefinition；在前面初始化bean的时候，就已经合并了，这里是再判断一次，如果当前bean没有合并，就合并；如果已经合并了，就直接从
+			 * 对应的map集合中取出合并之后的beanDefinition
+			 *
+			 * 之所以要做beanDefinition的merge操作，是因为有些beanDefinition是RootBeanDefinition的子类，如果直接用子BeanDefinition去实例化，可能会有问题
+			 * 因为一个子BeanDefinition可以继承父beanDefinition，一些共性的信息可以放到父BeanDefinition中，所以，在对bean进行初始化的时候，都要对相应的beanDefinition进行合并的操作，得到RootBeanDefinition;比如：
+			 *  RootBeanDefinitionA设置需要注入name属性
+			 *  BeanDefinitionB设置需要注入type属性，再设置BeanDefinitionB 继承RootBeanDefinitionA,假如在这里不合并rootBeanDefinitionA，那么B这个bd需要注入的属性就只有type，不会有name，那也就不是我们想要的bd了；所以这里要把子bd的属性合并到新的RootBeanDefinition中
 			 */
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {

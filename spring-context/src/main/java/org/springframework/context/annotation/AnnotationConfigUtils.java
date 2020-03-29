@@ -161,6 +161,8 @@ public class AnnotationConfigUtils {
 		/**
 		 * RootBeanDefinition ：可以简单理解为 RootBeanDefinition 是保存spring自己内部类的beanDefinition
 		 * 这里是在sprig初始化bean流程之前，先注入了几个beanFactoryPostProcessor 和 beanPostProcessor
+		 *
+		 * 在spring5.0的版本中，初始化了7个beanDefinition；但是在5.0之后的版本中，只初始化了6个。少了RequiredAnnotationProcessor
 		 */
 		if (!registry.containsBeanDefinition(CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME)) {
 			RootBeanDefinition def = new RootBeanDefinition(ConfigurationClassPostProcessor.class);

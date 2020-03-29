@@ -24,6 +24,8 @@ import org.springframework.lang.Nullable;
  *
  * @author Juergen Hoeller
  * @since 2.0
+ *
+ * 这里的这个source就是bean的路径
  */
 public interface BeanMetadataElement {
 

@@ -103,9 +103,13 @@ final class PostProcessorRegistrationDelegate {
 
 			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
 			/**
-			 *获取到一个beanFactoryPostProcessor  ConfigurationClassPostprocessor  因为这个是spring在最开始注入的
+			 *获取到了一个beanFactoryPostProcessor  ConfigurationClassPostprocessor
+			 * 并且这里也只会获取到一个，因为ConfigurationClassPostProcessor是spring在最开始注入的
 			 *
 			 * 这个类在spring解析扫描初始化的时候用到了，  ConfigurationClassPostProcessor是最终要的一个
+			 *
+			 * 在这里获取beanDefinitionRegistryPostProcessor类型的bean的时候，会对bean一个合并，也就是所谓的mergeBean
+			 * 在后面finishBeanFactoryInitialization方法中，对bean进行实例化的时候，会再判断一次
 			 */
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
@@ -145,7 +149,7 @@ final class PostProcessorRegistrationDelegate {
 			 * 这里执行的是所有实现了beanDefinitionRegistryPostProcessor且无需实现其他接口
 			 *
 			 * 这里为什么要用while(true)？
-			 *  因为有可能beanDefinitionRegistryPostProcessor的实现类中有可能会又注入了一个beanDefinitionRegistryPostProcessor的实现类，所以这里要循环查找并执行
+			 *  因为有可能beanDefinitionRegistryPostProcessor的实现类中有可能会又注入了一个beanDefinitionRegistryPostProcessor的实现类，所以这里要循环查找并执行;如果第二次从beanFactory中没有找到beanDefinitionRegistryPostProcessor的实现类，那么，这里就是false，就不会再执行了
 			 */
 			boolean reiterate = true;
 			while (reiterate) {
@@ -171,6 +175,8 @@ final class PostProcessorRegistrationDelegate {
 			 *  invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);这行代码吗？
 			 *  原因很简单，一个接口在实现beanDefinitionRegistryPostProcessor接口的同时，必然会实现beanFactoryPostProcessor接口
 			 *  所以，这里要执行
+			 *  registryProcessors中是spring内置的beanFactoryPOSTProcessor
+			 *  regularPostProcessors是程序员提供的beanFactoryPostProcessor
 			 */
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
