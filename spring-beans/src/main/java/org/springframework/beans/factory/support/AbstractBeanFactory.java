@@ -409,6 +409,11 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		return (T) bean;
 	}
 
+	/**
+	 * 在注入模型是byName的时候，如果从类中找到了多个set方法，就会根据名字(setXXXX,截取set方法名字中set之后的作为name)，来这里判断，判断这个name是否存在单实例池或者beanDefinitionMaps中
+	 * @param name the name of the bean to query
+	 * @return
+	 */
 	@Override
 	public boolean containsBean(String name) {
 		String beanName = transformedBeanName(name);

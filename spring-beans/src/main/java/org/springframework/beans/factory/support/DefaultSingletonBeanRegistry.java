@@ -187,6 +187,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 *   这样做是为了防止重复创建，
 	 *
 	 *   在获取到依赖的对象之后，会进行一次类型校验 org.springframework.beans.factory.support.AbstractBeanFactory#isTypeMatch(java.lang.String, org.springframework.core.ResolvableType)
+	 *
+	 *   循环依赖的处理：
+	 *   	如果A注入了B，B也注入了A；在第一次实例化A的时候，
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
@@ -355,6 +358,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @param beanName the name of the singleton about to be created
 	 * @see #isSingletonCurrentlyInCreation
 	 */
+	//把当前beanName添加到 singletonsCurrentlyInCreation 中 表示当前bean正在被创建
 	protected void beforeSingletonCreation(String beanName) {
 		if (!this.inCreationCheckExclusions.contains(beanName) && !this.singletonsCurrentlyInCreation.add(beanName)) {
 			throw new BeanCurrentlyInCreationException(beanName);
@@ -367,7 +371,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @param beanName the name of the singleton that has been created
 	 * @see #isSingletonCurrentlyInCreation
 	 */
-	//把当前beanName添加到 singletonsCurrentlyInCreation 中 表示当前bean正在被创建
+	//把当前beanName添加到 singletonsCurrentlyInCreation 中 remove掉
 	protected void afterSingletonCreation(String beanName) {
 		if (!this.inCreationCheckExclusions.contains(beanName) && !this.singletonsCurrentlyInCreation.remove(beanName)) {
 			throw new IllegalStateException("Singleton '" + beanName + "' isn't currently in creation");

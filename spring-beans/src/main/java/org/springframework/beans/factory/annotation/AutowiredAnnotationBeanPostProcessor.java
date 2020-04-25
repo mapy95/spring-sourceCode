@@ -470,7 +470,12 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		do {
 			final List<InjectionMetadata.InjectedElement> currElements = new ArrayList<>();
 
+			/**
+			 * ReflectionUtils.doWithLocalFields是获取属性上添加了@Autowired或者@Value的属性信息
+			 * ReflectionUtils.doWithLocalMethods 应该是获取方法上添加了这两个注解的信息
+			 */
 			ReflectionUtils.doWithLocalFields(targetClass, field -> {
+				//这个方法是找到当前bean的所有要注入属性对应的注解
 				AnnotationAttributes ann = findAutowiredAnnotation(field);
 				if (ann != null) {
 					if (Modifier.isStatic(field.getModifiers())) {
@@ -520,6 +525,9 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 	@Nullable
 	private AnnotationAttributes findAutowiredAnnotation(AccessibleObject ao) {
 		if (ao.getAnnotations().length > 0) {  // autowiring annotations have to be local
+			/**
+			 * 正常情况下，这里只有两个，分别是@Autowired注解和@Value;下面 return的就是在bean中添加了@Autowired或者@Value注解对应的属性值
+			 */
 			for (Class<? extends Annotation> type : this.autowiredAnnotationTypes) {
 				AnnotationAttributes attributes = AnnotatedElementUtils.getMergedAnnotationAttributes(ao, type);
 				if (attributes != null) {

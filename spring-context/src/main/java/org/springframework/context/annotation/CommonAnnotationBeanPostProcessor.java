@@ -203,6 +203,10 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 	 * {@link javax.annotation.PostConstruct} and {@link javax.annotation.PreDestroy},
 	 * respectively.
 	 */
+	/**
+	 * 由于该类就是来处理注解的初始化方法的，所以在初始化后置处理器的时候，就会把这个类要处理的注解初始化到集合中；
+	 * 这个方法是在spring流程中，注册后置处理器的时候，调用的
+	 */
 	public CommonAnnotationBeanPostProcessor() {
 		setOrder(Ordered.LOWEST_PRECEDENCE - 3);
 		setInitAnnotationType(PostConstruct.class);
@@ -298,6 +302,14 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 	}
 
 
+	/**
+	 * 在第三个后置处理器的调用时，会获取到当前bean中需要注入的属性，存到map中
+	 *
+	 * 找到bean中初始化方法，存入到集合中(只处理注解版的)
+	 * @param beanDefinition
+	 * @param beanType
+	 * @param beanName
+	 */
 	@Override
 	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
 		super.postProcessMergedBeanDefinition(beanDefinition, beanType, beanName);
@@ -319,7 +331,9 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 	public PropertyValues postProcessPropertyValues(
 			PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) {
 
-		//这里的metadata对象中有一个checkedElements,里面有一个member，member就是当前类依赖的对象
+		/**
+		 * 这里的metadata对象中有一个checkedElements,里面有一个member，member就是当前类依赖的对象
+		 */
 		InjectionMetadata metadata = findResourceMetadata(beanName, bean.getClass(), pvs);
 		try {
 			metadata.inject(bean, beanName, pvs);

@@ -1070,9 +1070,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			return new Jsr330ProviderFactory().createDependencyProvider(descriptor, requestingBeanName);
 		}
 		else {
+			//这里应该是获取加了@Lazy注解的注入属性，这里返回的应该是一个代理对象
 			Object result = getAutowireCandidateResolver().getLazyResolutionProxyIfNecessary(
 					descriptor, requestingBeanName);
 			if (result == null) {
+				//获取要注入的属性
 				result = doResolveDependency(descriptor, requestingBeanName, autowiredBeanNames, typeConverter);
 			}
 			return result;
@@ -1104,6 +1106,15 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 						converter.convertIfNecessary(value, type, descriptor.getMethodParameter()));
 			}
 
+			/**
+			 * 这里是来处理注入类型是list或者map的情况
+			 * 比如：
+			 * @Autowired
+			 * List<User> users;
+			 *
+			 *
+			 * 这种是可以把当前所有的接口实现类都注入进来
+			 */
 			Object multipleBeans = resolveMultipleBeans(descriptor, beanName, autowiredBeanNames, typeConverter);
 			if (multipleBeans != null) {
 				return multipleBeans;
@@ -1152,7 +1163,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 						return null;
 					}
 				}
-				//如果能找到一个，那就根据name获取到对应的instance实例，然后再field.set();
+				/**
+				 * 如果能找到一个，那就根据name获取到对应的instance实例，然后再field.set();
+				 */
 				instanceCandidate = matchingBeans.get(autowiredBeanName);
 			}
 			else {
@@ -1166,6 +1179,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				autowiredBeanNames.add(autowiredBeanName);
 			}
 			if (instanceCandidate instanceof Class) {
+				/**
+				 * 根据获取到的beanName和type从容器中查找。如果没有找到，就创建
+				 */
 				instanceCandidate = descriptor.resolveCandidate(autowiredBeanName, type, this);
 			}
 			Object result = instanceCandidate;

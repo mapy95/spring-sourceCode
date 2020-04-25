@@ -77,6 +77,9 @@ public abstract class AbstractDetectingUrlHandlerMapping extends AbstractUrlHand
 				applicationContext.getBeanNamesForType(Object.class));
 
 		// Take any bean name that we can determine URLs for.
+		/**
+		 * 遍历所有的beanName,过滤出beanName是以 / 开头的，因为如果是实现了Controller或者HttpRequestHandler的话，必须要用@Component指定映射路径
+		 */
 		for (String beanName : beanNames) {
 			String[] urls = determineUrlsForHandler(beanName);
 			if (!ObjectUtils.isEmpty(urls)) {

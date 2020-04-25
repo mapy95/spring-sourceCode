@@ -265,7 +265,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 * {@link Configuration} classes.
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
-		//这个list用来保存 添加@Component的类
+		//这个list用来保存 添加@Configuration的类
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
 		//获取在 new AnnotatedBeanDefinitionReader(this);中注入的spring自己的beanPostProcessor
 		String[] candidateNames = registry.getBeanDefinitionNames();
@@ -331,7 +331,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				this.metadataReaderFactory, this.problemReporter, this.environment,
 				this.resourceLoader, this.componentScanBeanNameGenerator, registry);
 
-		//这两个set主要是为了去重
+		/**
+		 * 这两个set主要是为了去重
+		 * 正常情况下，下面的do...while循环中，只会循环处理所有的配置类，因为到目前，还没有普通的bean添加到beanDefinitionMap中
+		 */
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
 		do {

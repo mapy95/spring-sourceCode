@@ -145,6 +145,7 @@ class ConfigurationClassBeanDefinitionReader {
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
+		//对importResource注解 注入的配置文件进行处理
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
 		//这里是对ImportBeanDefinitionRegistrar注入的bean进行初始化
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());

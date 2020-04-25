@@ -76,10 +76,10 @@ final class PostProcessorRegistrationDelegate {
 			for (BeanFactoryPostProcessor postProcessor : beanFactoryPostProcessors) {
 				/**
 				 * 区分当前bean是BeanDefinitionRegistryPostProcessor还是 beanFactoryPostProcessor
-				 * 因为前者是后者的子类，所有在获取beanFactoryPostprocessor的时候 也可以获取到
+				 * 因为前者是后者的子类，所以在获取beanFactoryPostprocessor的时候 也可以获取到
 				 *
 				 * 在本方法中  是先执行实现了BeanDefinitionRegistryPostProcessor的类
-				 * 在执行beanFactoryPostProcessor的类
+				 * 再执行beanFactoryPostProcessor的类
 				 */
 				if (postProcessor instanceof BeanDefinitionRegistryPostProcessor) {
 					BeanDefinitionRegistryPostProcessor registryProcessor =
@@ -106,7 +106,7 @@ final class PostProcessorRegistrationDelegate {
 			 *获取到了一个beanFactoryPostProcessor  ConfigurationClassPostprocessor
 			 * 并且这里也只会获取到一个，因为ConfigurationClassPostProcessor是spring在最开始注入的
 			 *
-			 * 这个类在spring解析扫描初始化的时候用到了，  ConfigurationClassPostProcessor是最终要的一个
+			 * 这个类在spring解析扫描初始化的时候用到了，  ConfigurationClassPostProcessor是最重要的一个
 			 *
 			 * 在这里获取beanDefinitionRegistryPostProcessor类型的bean的时候，会对bean一个合并，也就是所谓的mergeBean
 			 * 在后面finishBeanFactoryInitialization方法中，对bean进行实例化的时候，会再判断一次
@@ -146,7 +146,7 @@ final class PostProcessorRegistrationDelegate {
 
 			// Finally, invoke all other BeanDefinitionRegistryPostProcessors until no further ones appear.
 			/**
-			 * 这里执行的是所有实现了beanDefinitionRegistryPostProcessor且无需实现其他接口
+			 * 这里执行的是所有实现了beanDefinitionRegistryPostProcessor且无实现其他接口的类
 			 *
 			 * 这里为什么要用while(true)？
 			 *  因为有可能beanDefinitionRegistryPostProcessor的实现类中有可能会又注入了一个beanDefinitionRegistryPostProcessor的实现类，所以这里要循环查找并执行;如果第二次从beanFactory中没有找到beanDefinitionRegistryPostProcessor的实现类，那么，这里就是false，就不会再执行了
@@ -175,7 +175,7 @@ final class PostProcessorRegistrationDelegate {
 			 *  invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);这行代码吗？
 			 *  原因很简单，一个接口在实现beanDefinitionRegistryPostProcessor接口的同时，必然会实现beanFactoryPostProcessor接口
 			 *  所以，这里要执行
-			 *  registryProcessors中是spring内置的beanFactoryPOSTProcessor
+			 *  registryProcessors中是spring内置的beanFactoryPostProcessor
 			 *  regularPostProcessors是程序员提供的beanFactoryPostProcessor
 			 */
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
@@ -196,6 +196,8 @@ final class PostProcessorRegistrationDelegate {
 		 * 这里的是程序员提供的beanFactoryPostProcessor的实现类，是通过@Component注解提供的，而不是ac.addBeanFactoryPostProcessor提供的
 		 *
 		 * 上面执行的，仅仅是程序员通过add到spring容器中的beanFactoryPostProcessor
+		 *
+		 * 在对包进行扫描的时候，会把我们定义的通过@Component注入的beanFactoryPostProcessor的实现类，作为beanDefinition注入，然后在这里进行处理
 		 */
 		String[] postProcessorNames =
 				beanFactory.getBeanNamesForType(BeanFactoryPostProcessor.class, true, false);
@@ -247,7 +249,7 @@ final class PostProcessorRegistrationDelegate {
 	public static void registerBeanPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
 
-		//获取到所有实现了beanPostProcessor接口的实现类的name
+		//获取到所有实现了beanPostProcessor接口的实现类的name,从beanDefinitionMaps中获取
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
 
 		// Register BeanPostProcessorChecker that logs an info message when
@@ -262,8 +264,15 @@ final class PostProcessorRegistrationDelegate {
 		List<BeanPostProcessor> internalPostProcessors = new ArrayList<>();
 		List<String> orderedPostProcessorNames = new ArrayList<>();
 		List<String> nonOrderedPostProcessorNames = new ArrayList<>();
+		/**
+		 * 按照后置处理器实现的ordered接口 分别存到不同的集合中
+		 */
 		for (String ppName : postProcessorNames) {
 			if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
+				/**
+				 * 在调用getBean的时候，就会调用对应的初始化方法，完成对beanPostProcessor的初始化
+				 * registerBeanPostProcessors只是把后置处理器添加到不同的集合中
+				 */
 				BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
 				priorityOrderedPostProcessors.add(pp);
 				if (pp instanceof MergedBeanDefinitionPostProcessor) {

@@ -219,6 +219,9 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 						logger.debug("Could not resolve target class for bean with name '" + beanName + "'", ex);
 					}
 				}
+				/**
+				 * 判断当前bean是否是@Controller或者@RequestMapping修饰的bean
+				 */
 				if (beanType != null && isHandler(beanType)) {
 					detectHandlerMethods(beanName);
 				}
@@ -241,7 +244,9 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 				obtainApplicationContext().getType((String) handler) : handler.getClass());
 
 		if (handlerType != null) {
+			//userType是当前的类名
 			Class<?> userType = ClassUtils.getUserClass(handlerType);
+			//根据类名获取到所有的方法
 			Map<Method, T> methods = MethodIntrospector.selectMethods(userType,
 					(MethodIntrospector.MetadataLookup<T>) method -> {
 						try {
@@ -314,6 +319,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 
 	/**
 	 * Look up a handler method for the given request.
+	 * 获取当前请求中的URL地址，并进行匹配对应的处理方法
 	 */
 	@Override
 	protected HandlerMethod getHandlerInternal(HttpServletRequest request) throws Exception {
@@ -351,6 +357,11 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	@Nullable
 	protected HandlerMethod lookupHandlerMethod(String lookupPath, HttpServletRequest request) throws Exception {
 		List<Match> matches = new ArrayList<>();
+		/**
+		 * 处理@Controller注解对应的request请求，如果映射到对应的methodInfo
+		 * 如果没有映射到对应的URL，那directPathMatches是null
+		 * 如果映射到了，就执行addMatchingMappings，这个方法中，会把映射到的info添加到matches这个集合中
+		 */
 		List<T> directPathMatches = this.mappingRegistry.getMappingsByUrl(lookupPath);
 		if (directPathMatches != null) {
 			addMatchingMappings(directPathMatches, matches, request);
@@ -521,6 +532,8 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 		 * @Controller  @RequestMapping：这种情况，用的是urlLookUp这个map
 		 * 另外一种是实现Controller接口，然后用的是:
 		 *  org.springframework.web.servlet.handler.AbstractUrlHandlerMapping#lookupHandler(java.lang.String, javax.servlet.http.HttpServletRequest)中的 handlerMap
+		 *
+		 *  所以：如果程序员是用@Controller来声明controller的，接口中，所有的URL映射地址以及对应的method会存入到这个map中
 		 */
 		@Nullable
 		public List<T> getMappingsByUrl(String urlPath) {

@@ -175,6 +175,10 @@ import javax.servlet.ServletException;
  * @see org.springframework.web.servlet.support.AbstractDispatcherServletInitializer
  * @see org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer
  */
+
+/**
+ * Tomcat在启动的时候，会调用该接口的实现类中的onStartup方法
+ */
 public interface WebApplicationInitializer {
 
 	/**

@@ -534,12 +534,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 			try {
 				// Allows post-processing of the bean factory in context subclasses.
+				//空方法，留给子类去自定义
 				postProcessBeanFactory(beanFactory);
 
 				// Invoke factory processors registered as beans in the context.
 				/**
 				 * TODO
-				 * 完成对bean的扫描，将beanDefinition存到map中
+				 * 完成对bean的扫描，将class变成beanDefinition，并将beanDefinition存到map中
 				 *
 				 * 该方法在spring的环境中执行已经被注册的factory processors；
 				 * 执行自定义的processBeanFactory
@@ -592,7 +593,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Initialize other special beans in specific context subclasses.
 				/**
-				 * 这是一个空方法，在springboot中，如果集成了Tomcat，会在这里new Tomcat()
+				 * 这是一个空方法，在springboot中，如果集成了Tomcat，会在这里new Tomcat()，new DispatcherServlert();
 				 */
 				onRefresh();
 
@@ -628,6 +629,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				}
 
 				// Destroy already created singletons to avoid dangling resources.
+				//调用bean的销毁方法
 				destroyBeans();
 
 				// Reset 'active' flag.
@@ -804,7 +806,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * Initialize the MessageSource.
 	 * Use parent's if none defined in this context.
 	 */
-	protected void initMessageSource() {
+	protected void
+	initMessageSource() {
 		ConfigurableListableBeanFactory beanFactory = getBeanFactory();
 		if (beanFactory.containsLocalBean(MESSAGE_SOURCE_BEAN_NAME)) {
 			this.messageSource = beanFactory.getBean(MESSAGE_SOURCE_BEAN_NAME, MessageSource.class);

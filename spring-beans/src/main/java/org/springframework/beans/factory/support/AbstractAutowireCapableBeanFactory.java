@@ -488,6 +488,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			 *mpy 第一次调用bean后置处理器 ；在bean初始化之前调用后置处理器，如果后置处理器返回的bean不为空，直接返回
 			 *  这里调用的是postProcessBeforeInstantiation；
 			 *  InstantiationAwareBeanPostProcessor  是beanPostProcessor的子类，所以，在instantiationAwareBeanPostProcessor中，对beanPostProcessor进行了扩展
+			 *
+			 *  AOP对应的后置处理器:AnnotationAwareAspectJAutoProxyCreator在这个方法中，会先推断一下，哪些bean是需要进行AOP代理的
 			 */
 
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
@@ -1359,7 +1361,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// to support styles of field injection.
 		boolean continueWithPropertyPopulation = true;
 
-		//第五次调用后置处理器  判断是否需要填充属性
+		/**
+		 * 第五次调用后置处理器  判断是否需要填充属性；返回false，表示无需进行属性注入
+		 * 是调用的postProcessorAfterInstantiation方法，在这个方法里面，如果返回false，就不会再进行属性注入；所以，如果程序员要对每个bean不进行属性注入
+		 * 一定要在扩展方法中加上对bean的判断，否则的话，会导致所有的bean不进行属性注入
+		 */
 		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
@@ -1379,7 +1385,17 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		//mbd.setPropertyValues()  获取到 给beanDefinition设置的属性值
 		PropertyValues pvs = (mbd.hasPropertyValues() ? mbd.getPropertyValues() : null);
 
-		//spring默认的注入模型是 AUTOWIRE_NO
+		/**
+		 * spring默认的注入模型是 AUTOWIRE_NO
+		 *
+		 * 我们可以将autowireMode设置过值的，称之为自动注入，将@Autowired和@Resource注解的  称之为手动注入
+		 * 自动注入的时候，下面的newPvs是根据自动注入模型找到的要注入的属性，然后再下面，会进行统一的注入
+		 * 如果是手动注入，那么是在上面一行代码中，获取到程序员手动在代码中声明的要注入的属性
+		 * ac.getBeanDefinition("ccc").getPropertyValues().add("name","mpyTest"); 这种就是在代码中手动声明要注入的属性
+		 *
+		 * 自动注入才是我们真正说的 byType  byName,在后面的源码中，我会解释
+		 * 对于手动注入，我们所说的byType并不是从单实例池中根据类型查找的
+		 */
 		if (mbd.getResolvedAutowireMode() == AUTOWIRE_BY_NAME || mbd.getResolvedAutowireMode() == AUTOWIRE_BY_TYPE) {
 			MutablePropertyValues newPvs = new MutablePropertyValues(pvs);
 			// Add property values based on autowire by name if applicable.
@@ -1427,6 +1443,13 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
+		/**
+		 * 在这里有一个点，需要明白：
+		 *  1.@Autowired和@Resource注解注入的方式我们可以理解为手动注入；通过设置AutowiredModel的形式是自动注入
+		 *  2.手动注入的属性，是在上面 ibp.postProcessPropertyValues(pvs, filteredPds, bw.getWrappedInstance(), beanName); 这里完成的属性填充
+		 *    对于自动注入的以及程序员自己提供的待注入属性，是在下面这行代码完成的属性填充
+		 *  3.第三次调用后置处理器，查到的是手动注入的注解，需要注入的属性，手动注入是通过field.set()来完成的属性注入；自动注入是通过method.invoke()完成的
+		 */
 		if (pvs != null) {
 			applyPropertyValues(beanName, mbd, bw, pvs);
 		}
@@ -1444,9 +1467,14 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	protected void autowireByName(
 			String beanName, AbstractBeanDefinition mbd, BeanWrapper bw, MutablePropertyValues pvs) {
 
+		//这里的propertyNames就是获取到所有的set方法对应的方法名，底层是通过writeMethod来判断的
 		String[] propertyNames = unsatisfiedNonSimpleProperties(mbd, bw);
 		for (String propertyName : propertyNames) {
 			if (containsBean(propertyName)) {
+				/**
+				 * getBean()这个方法我个人感觉就可以说明autowire_name是根据名字来注入属性的
+				 * 这里的propertyName就是set方法对应的name
+				 */
 				Object bean = getBean(propertyName);
 				pvs.add(propertyName, bean);
 				registerDependentBean(propertyName, beanName);
@@ -1484,6 +1512,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		Set<String> autowiredBeanNames = new LinkedHashSet<>(4);
+		//这行代码是获取到当期那bean中所有的writeMethod方法，个人理解，就是set方法
 		String[] propertyNames = unsatisfiedNonSimpleProperties(mbd, bw);
 		for (String propertyName : propertyNames) {
 			try {
@@ -1495,6 +1524,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					// Do not allow eager init for type matching in case of a prioritized post-processor.
 					boolean eager = !PriorityOrdered.class.isInstance(bw.getWrappedInstance());
 					DependencyDescriptor desc = new AutowireByTypeDependencyDescriptor(methodParam, eager);
+					//这个方法中，会根据beanName去加载；这里的desc,就是bean中的set方法名，比如 setIndexBean123
 					Object autowiredArgument = resolveDependency(desc, beanName, autowiredBeanNames, converter);
 					if (autowiredArgument != null) {
 						pvs.add(propertyName, autowiredArgument);
@@ -1528,10 +1558,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	protected String[] unsatisfiedNonSimpleProperties(AbstractBeanDefinition mbd, BeanWrapper bw) {
 		Set<String> result = new TreeSet<>();
 		PropertyValues pvs = mbd.getPropertyValues();
-		//获取当前bean的所有属性
+		//获取到当前bean中所以设置属性的方法和获取属性的方法：就是getXXX,和setXXX
 		PropertyDescriptor[] pds = bw.getPropertyDescriptors();
 		for (PropertyDescriptor pd : pds) {
-			//判断哪些属性是不需要自动注入的
+			//判断哪些属性是不需要自动注入的；在Java中，方法可以分为读方法(readMethod)和写方法(writeMethod)
 			if (pd.getWriteMethod() != null && !isExcludedFromDependencyCheck(pd) && !pvs.contains(pd.getName()) &&
 					!BeanUtils.isSimpleProperty(pd.getPropertyType())) {
 				result.add(pd.getName());
@@ -1773,7 +1803,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
-			//mpy 执行initializingBean方法，就是spring的初始化方法  @PostContruct
+			//mpy 执行initializingBean方法，就是spring的初始化方法；和init-method
 			invokeInitMethods(beanName, wrappedBean, mbd);
 		}
 		catch (Throwable ex) {
@@ -1847,6 +1877,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			if (StringUtils.hasLength(initMethodName) &&
 					!(isInitializingBean && "afterPropertiesSet".equals(initMethodName)) &&
 					!mbd.isExternallyManagedInitMethod(initMethodName)) {
+				//init-method方法
 				invokeCustomInitMethod(beanName, bean, mbd);
 			}
 		}

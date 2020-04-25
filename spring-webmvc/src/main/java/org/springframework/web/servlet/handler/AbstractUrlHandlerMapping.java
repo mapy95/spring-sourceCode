@@ -117,6 +117,12 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping i
 	 * @param request current HTTP request
 	 * @return the handler instance, or {@code null} if none found
 	 */
+	/**
+	 * 处理实现controller接口或者httpRequestHandler接口的controller对应的请求
+	 * @param request current HTTP request
+	 * @return
+	 * @throws Exception
+	 */
 	@Override
 	@Nullable
 	protected Object getHandlerInternal(HttpServletRequest request) throws Exception {
