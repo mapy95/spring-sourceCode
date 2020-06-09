@@ -596,6 +596,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			 * 这里还有一个关键的作用，可以追进去看一下，这里可能会完成动态代理对象的生成(AOP)
 			 * 正常情况下，AOP的动态代理是在调用org.springframework.beans.factory.config.BeanPostProcessor#postProcessAfterInitialization(java.lang.Object, java.lang.String)的时候，才会生成
 			 * 但是，如果是循环依赖的话，会在 org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference(java.lang.Object, java.lang.String) 中完成
+			 *
+			 * 这里getEarlyBeanReference();不会立即执行，而是在从二级缓存中获取对象的时候，会调用该方法，在该方法中完成动态代理
 			 */
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}

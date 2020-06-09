@@ -123,10 +123,12 @@ abstract class ConfigurationClassUtils {
 		}
 		/**
 		 * else里面是校验当前bean是否包含
-		 * 		candidateIndicators.add(Component.class.getName());
-		 * 		candidateIndicators.add(ComponentScan.class.getName());
-		 * 		candidateIndicators.add(Import.class.getName());
-		 * 		candidateIndicators.add(ImportResource.class.getName());
+		 * 	candidateIndicators.add(Component.class.getName());
+		 * 	candidateIndicators.add(ComponentScan.class.getName());
+		 * 	candidateIndicators.add(Import.class.getName());
+		 * 	candidateIndicators.add(ImportResource.class.getName());
+		 *
+		 * 	@Component @ComponentScan @Import @ImportResource
 		 */
 		else if (isLiteConfigurationCandidate(metadata)) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);

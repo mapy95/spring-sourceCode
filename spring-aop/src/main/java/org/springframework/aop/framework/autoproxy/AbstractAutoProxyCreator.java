@@ -312,6 +312,9 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) throws BeansException {
 		if (bean != null) {
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
+			/**
+			 * 下面这行代码的意思是：从earlyProxyReferences这个set集合中，如果当前key是在循环依赖处理的后置处理器中完成了aop的动态代理，就无需再次代理了
+			 */
 			if (!this.earlyProxyReferences.contains(cacheKey)) {
 				return wrapIfNecessary(bean, beanName, cacheKey);
 			}

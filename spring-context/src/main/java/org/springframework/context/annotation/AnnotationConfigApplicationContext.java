@@ -76,7 +76,6 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		 */
 		this.reader = new AnnotatedBeanDefinitionReader(this);
 		/**
-		 * mpy
 		 * 实际上完成包扫描并不是这里的scanner完成的。而是spring自己new的一个ClassPathBeanDefinitionScanner完成的
 		 * 这里的scanner是为了程序员能够在外部调用annotationConfigApplicationbContext对象,简单而言，spring遵循了开闭原则
 		 *
@@ -87,7 +86,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		 *   javax.annotation.ManagedBean
 		 *   javax.inject.Named
 		 *
-		 * 在扫描@ComponentScan下面的bean时，获取到的是包路径下所有的.class文件，那spring如何区分是要将哪些bean注入的呢？在后面包扫描会加注释
+		 * 在扫描@ComponentScan下面的bean时，获取到的是包路径下所有的.class文件，那spring如何区分是要将哪些bean注入的呢？就和这里的includeFilters有关系。在后面包扫描会加注释
 		 */
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
@@ -110,7 +109,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 *
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
-		//mpy 在this()中调用父类的方法  创建了 DefaultListableBeanFactory(这就是平常说的springbean工厂)
+		//在this()中调用父类的方法  创建了 DefaultListableBeanFactory(这就是平常说的springbean工厂)
 		this();
 		//把annotatedClasses(AppConfig.java)放到spring容器中
 		register(annotatedClasses);

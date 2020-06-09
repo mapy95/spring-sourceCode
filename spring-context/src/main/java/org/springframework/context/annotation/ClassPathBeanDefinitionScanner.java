@@ -291,13 +291,15 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				 * 在这里，下面的两个if都会进去，因为在扫描的时候  声明的是ScannedGenericBeanDefinition类型
 				 * public class ScannedGenericBeanDefinition extends GenericBeanDefinition implements AnnotatedBeanDefinition
 				 *
-				 * 这里是设置bean的默认值
+				 * 这里是设置bean对应的beanDefinition的属性值
 				 */
 				if (candidate instanceof AbstractBeanDefinition) {
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
 				if (candidate instanceof AnnotatedBeanDefinition) {
-					//这里是把常用的注解值放到annotatedBeanDefinition
+					/**
+					 * 根据bean的注解配置，设置beanDefinition的值，比如：@Lazy、@DependsOn、@Primary等
+					 */
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
 				if (checkCandidate(beanName, candidate)) {
@@ -306,7 +308,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
 					/**
-					 *  如果将bean存入到beanDefinitionMap第八步
+					 *  将bean存入到beanDefinitionMap
 					 */
 					registerBeanDefinition(definitionHolder, this.registry);
 				}

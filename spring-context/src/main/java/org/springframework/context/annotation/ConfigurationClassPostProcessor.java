@@ -265,7 +265,20 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 * {@link Configuration} classes.
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
-		//这个list用来保存 添加@Configuration的类
+		/**
+		 * 这个list用来保存
+		 * 	添加@Configuration的类
+		 * 	添加了@Component
+		 * 	或者@ComponentScan
+		 * 	或者@Import
+		 * 	或者@ImportResource
+		 * 	注解的类
+		 *
+		 * 唯一的区别是：如果类上加了@Configuration，对应的ConfigurationClass是full；否则是lite
+		 *
+		 * 正常情况下，第一次进入到这里的时候，只有配置类一个bean，因为如果是第一次进入到这里的话，beanDefinitionMap中，只有配置类这一个是我们程序员提供的
+		 * 业务类，其他的都是spring自带的后置处理器
+		 */
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
 		//获取在 new AnnotatedBeanDefinitionReader(this);中注入的spring自己的beanPostProcessor
 		String[] candidateNames = registry.getBeanDefinitionNames();
@@ -273,12 +286,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		for (String beanName : candidateNames) {
 			/**
 			 * 根据beanName,从beanDefinitionMap中获取beanDefinition
-			 * 这里代码的意思是要获取到所有的配置类
-			 * 换言之，这里的configCandidates中保存了所有的配置类(@Configuration)
 			 */
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
 			/**
-			 * 如果bean是配置类，就是full，否则就是lite
+			 * 如果bean是配置类，configurationClass就是full，否则就是lite
 			 * 这里，如果当前bean 的configurationClass属性已经被设置值了，说明当前bean已经被解析过来，就无需再次解析
 			 */
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef) ||

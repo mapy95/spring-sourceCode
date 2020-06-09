@@ -519,8 +519,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 			// Tell the subclass to refresh the internal bean factory.
 			/**
-			 * 返回一个factory
-			 * xml格式的配置文件，是在这个方法中扫描到beanDefinitionMap中的
+			 * 初始化BeanFactory,解析xml格式的配置文件
+			 * xml格式的配置，是在这个方法中扫描到beanDefinitionMap中的
 			 * 在org.springframework.web.context.support.XmlWebApplicationContext#loadBeanDefinitions(org.springframework.beans.factory.support.DefaultListableBeanFactory)中会创建一个XmlBeanDefinitionReader来解析xml文件
 			 * 会把bean.xml解析成一个InputStream,然后再解析成document格式
 			 * 按照document格式解析，从root节点进行解析，判断root节点是bean？还是beans?还是import等，如果是bean
@@ -529,7 +529,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
-			//准备工厂
+			//准备工厂，给BeanFactory设置属性、添加后置处理器等
 			prepareBeanFactory(beanFactory);
 
 			try {
@@ -572,7 +572,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Register bean processors that intercept bean creation.
 				/**
-				 *  注册beanPostProcessor;方法里面
+				 *  注册beanPostProcessor;在方法里面
 				 *  会先把beanPostProcessor进行分类，然后按照beanPostProcessor的name从spring容器中获取bean对象，如果spring容器中没有，就创建;所以如果一个beanDefinition是后置处理器，会这这里进行实例化，然后存放到单实例池中
 				 *  然后再调用的是 beanFactory.addBeanPostProcessor(postProcessor);
 				 * 把所有的beanPostProcessor放到了beanPostProcessors中，在后面初始化bean的时候，如果需要调用后置处理器，就会遍历这个list，
@@ -600,7 +600,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// Check for listener beans and register them.
 				/**
 				 * 注册所有的事件监听器
-				 * 将容器中的时间监听器添加到 applicationEventMulticaster 中
+				 * 将容器中的事件监听器添加到 applicationEventMulticaster 中
 				 *
 				 */
 				registerListeners();
@@ -959,7 +959,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
-		//上面的代码可以简单理解为对spring进行的一些校验
+		//上面的代码可以简单理解为对spring进行的一些校验，下面是完成对bean的实例化
 		beanFactory.preInstantiateSingletons();
 	}
 
@@ -979,6 +979,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		getLifecycleProcessor().onRefresh();
 
 		// Publish the final event.
+		// 发布上下文刷新事件
 		publishEvent(new ContextRefreshedEvent(this));
 
 		// Participate in LiveBeansView MBean, if active.

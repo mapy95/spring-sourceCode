@@ -233,6 +233,10 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 		destroy();
 	}
 
+	/**
+	 * spring销毁方法：
+	 * 	1.postProcessBeforeDestruction: 处理@PreDestroy注解
+	 */
 	@Override
 	public void destroy() {
 		if (!CollectionUtils.isEmpty(this.beanPostProcessors)) {

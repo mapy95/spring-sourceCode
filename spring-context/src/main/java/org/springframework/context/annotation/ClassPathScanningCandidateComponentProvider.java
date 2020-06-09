@@ -210,9 +210,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 *
 	 */
 	protected void registerDefaultFilters() {
+		//将@Component注解添加到集合中
 		this.includeFilters.add(new AnnotationTypeFilter(Component.class));
 		ClassLoader cl = ClassPathScanningCandidateComponentProvider.class.getClassLoader();
 		try {
+			//将managedbean添加到集合中
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("javax.annotation.ManagedBean", cl)), false));
 			logger.debug("JSR-250 'javax.annotation.ManagedBean' found and supported for component scanning");
@@ -221,6 +223,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			// JSR-250 1.1 API (as included in Java EE 6) not available - simply skip.
 		}
 		try {
+			//将Named添加到集合中
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("javax.inject.Named", cl)), false));
 			logger.debug("JSR-330 'javax.inject.Named' annotation found and supported for component scanning");
@@ -431,6 +434,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 				if (traceEnabled) {
 					logger.trace("Scanning " + resource);
 				}
+				// 判断文件是否可读：这里百度的结果是：如果返回true，不一定可读，但是如果返回false，一定不可读
 				if (resource.isReadable()) {
 					try {
 						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
@@ -442,11 +446,16 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 						 * 在初始化这个bean的时候，给一个list中存入了三个类，其中有一个就是Component.class，个人理解：在这个方法中，会
 						 * 判断扫描出来的class文件是否有Component注解；需要注意的是@Controller @Service @Repository都是被@Component注解修饰的
 						 * 所以，@Controller... 这些注解修饰的bean也会被注入到spring容器中
+						 *
+						 * excludeFilter是在doScan()方法中赋值的，excludeFilter中包含的是当前配置类的beanClassName;因为当前配置类已经存在于beanDefinitionMap中，无需再次添加
 						 */
 						if (isCandidateComponent(metadataReader)) {
 							ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 							sbd.setResource(resource);
 							sbd.setSource(resource);
+							/**
+							 * 对scannedGenericBeanDefinition进行判断
+							 */
 							if (isCandidateComponent(sbd)) {
 								if (debugEnabled) {
 									logger.debug("Identified candidate component class: " + resource);
@@ -541,12 +550,12 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
 		AnnotationMetadata metadata = beanDefinition.getMetadata();
 		/**
-		 * 当前bean不是接口，不是抽象类，或者当前bean是抽象类，并且同时有lookup注解修饰，就可以注入到spring容器中
-		 *
-		 * spring在扫描普通bean，是用的这个方法，mybatis对该方法进行了扩展，mybatis判断一个beanDefinition是否要放到beanDefinitionMap中，是判断当前是否是接口，是否是顶级类
+		 * spring在扫描普通bean，是用的这个方法，mybatis对该方法进行了扩展，mybatis判断一个beanDefinition是否要放到beanDefinitionMap中，是判断当前是否是接口，是否是顶级类（org.mybatis.spring.mapper.ClassPathMapperScanner#isCandidateComponent）
 		 *
 		 * isIndependent：当前类是否独立(顶级类或者嵌套类)
-		 *
+		 * isConcrete: 不是接口，不是抽象类，就返回true
+		 * 如果bean是抽象类，且添加了@LookUp注解，也可以注入
+		 * 使用抽象类+@LookUp注解，可以解决单实例bean依赖原型bean的问题，这里在spring官方文档中应该也有说明
 		 */
 		return (metadata.isIndependent() && (metadata.isConcrete() ||
 				(metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName()))));
