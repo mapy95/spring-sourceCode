@@ -166,7 +166,11 @@ class ConfigurationClassParser {
 		for (BeanDefinitionHolder holder : configCandidates) {
 			BeanDefinition bd = holder.getBeanDefinition();
 			try {
-				//根据beanDefinition的不同来做不同的处理
+				/**
+				 * 根据beanDefinition的不同来做不同的处理
+				 * 如果bean是配置类(加了@Configuration注解的配置类)，那这里就会走下面的第一个分支的判断条件
+				 * 因为在将配置类放到beanDefinitionMap中的时候，是将配置类声明为了AnnotatedGenericBeanDefinition类型的
+				 */
 				if (bd instanceof AnnotatedBeanDefinition) {
 					/**
 					 *  如果将bean存入到beanDefinitionMap第四步
@@ -225,6 +229,7 @@ class ConfigurationClassParser {
 
 
 	protected void processConfigurationClass(ConfigurationClass configClass) throws IOException {
+		// 这里应该是和@Conditional注解有关系，待研究
 		if (this.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) {
 			return;
 		}
@@ -332,7 +337,7 @@ class ConfigurationClassParser {
 		/**
 		 * 处理 import注解
 		 *
-		 * 这里处理import是要判断我们的类当中是否有@Import注解，如果有，把import注解的值拿出来(就是import的那个类)
+		 * 这里处理import是要判断我们的类当中是否有@Import注解，如果有，把import注解的value拿出来(就是import的那个类)
 		 * getImports(sourceClass)方法会获取到当前配置类上import注解注入的所有class
 		 *
 		 * 比如：@Import(XXXX.class),那么这里把XXXX.class拿去解析
@@ -445,12 +450,14 @@ class ConfigurationClassParser {
 	 */
 	private Set<MethodMetadata> retrieveBeanMethodMetadata(SourceClass sourceClass) {
 		AnnotationMetadata original = sourceClass.getMetadata();
+		//1.获取到配置类中所有@Bean对应的方法
 		Set<MethodMetadata> beanMethods = original.getAnnotatedMethods(Bean.class.getName());
 		if (beanMethods.size() > 1 && original instanceof StandardAnnotationMetadata) {
 			// Try reading the class file via ASM for deterministic declaration order...
 			// Unfortunately, the JVM's standard reflection returns methods in arbitrary
 			// order, even between different runs of the same application on the same JVM.
 			try {
+				//2.根据配置类的className获取到类中所有加了注解的方法；这里不太明白为什么要用metadataReaderFactory再获取一遍注解方法
 				AnnotationMetadata asm =
 						this.metadataReaderFactory.getMetadataReader(original.getClassName()).getAnnotationMetadata();
 				Set<MethodMetadata> asmMethods = asm.getAnnotatedMethods(Bean.class.getName());
@@ -458,6 +465,7 @@ class ConfigurationClassParser {
 					Set<MethodMetadata> selectedMethods = new LinkedHashSet<>(asmMethods.size());
 					for (MethodMetadata asmMethod : asmMethods) {
 						for (MethodMetadata beanMethod : beanMethods) {
+							//根据1和2两处获取到的beanName进行对比，如果一致，就添加到待处理的set集合中
 							if (beanMethod.getMethodName().equals(asmMethod.getMethodName())) {
 								selectedMethods.add(beanMethod);
 								break;
@@ -585,6 +593,7 @@ class ConfigurationClassParser {
 			throws IOException {
 
 		if (visited.add(sourceClass)) {
+			// 遍历获取sourceClass所有的注解
 			for (SourceClass annotation : sourceClass.getAnnotations()) {
 				String annName = annotation.getMetadata().getClassName();
 				if (!annName.startsWith("java") && !annName.equals(Import.class.getName())) {
@@ -657,15 +666,15 @@ class ConfigurationClassParser {
 			this.importStack.push(configClass);
 			try {
 				/**
-				 * 在处理import的时候  有两个比较重要的 ImportSelector和ImportBeanDefinitionRegistrar
-				 * 第三种就是普通的类
+				 * 在处理import的时候有三种类型
+				 * 	ImportSelector：
+				 * 		ImportSelector的实现类中，return的全类名数组; 在这里 会依次解析每个类，防止类中有ImportSelector和ImportBeanDefinitionRegistrar的实现类
+				 * 		返回的bean存放到了configurationClasses中  在前面的org.springframework.context.annotation.ConfigurationClassBeanDefinitionReader#loadBeanDefinitions(java.util.Set)方法中初始化
 				 *
-				 * ImportSelector的实现类中，return的全类名数组，会依次解析每个类，防止类中有ImportSelector和ImportBeanDefinitionRegistrar的实现类
-				 * 返回的bean存放到了configurationClasses中  在前面的org.springframework.context.annotation.ConfigurationClassBeanDefinitionReader#loadBeanDefinitions(java.util.Set)方法中初始化
-				 *
-				 * ImportBeanDefinitionRegistrar的实现类 存放到了importBeanDefinitionRegistrars中
-				 *
-				 *
+				 * 	ImportBeanDefinitionRegistrar：
+				 * 		该接口的实现类，存放到了importBeanDefinitionRegistrars中
+				 *  普通的类(bean)：
+				 *  	存入到了configurationClasses这个集合中
 				 *
 				 */
 				for (SourceClass candidate : importCandidates) {
@@ -675,27 +684,39 @@ class ConfigurationClassParser {
 						ImportSelector selector = BeanUtils.instantiateClass(candidateClass, ImportSelector.class);
 						ParserStrategyUtils.invokeAwareMethods(
 								selector, this.environment, this.resourceLoader, this.registry);
+						/**
+						 * 首先判断当前import的selector是否是DeferredImportSelector类型的；springboot自动注入的时候，有用到这的逻辑
+						 * 	AutoConfigurationImportSelector实现了DeferredImportSelector接口
+						 *
+						 * 如果不是DeferredImportSelector，那就去解析
+						 * importClassNames：存储的就是实现了ImportSelector接口的类中selectImports方法返回的值(这里返回的就是要注入的bean的全类名)
+						 * 然后会进行循环递归调用importSelector方法；
+						 * 	对importClassNames中的类进行解析；防止要导入的bean也是ImportSelector的实现类(意思就是：我在ImportSelector的实现类中返回了A的全类名，A也是一个ImportSelector或者ImportBeanDefinitionRegistrar的实现类；所以这里要递归调用，重复解析)
+						 */
 						if (this.deferredImportSelectors != null && selector instanceof DeferredImportSelector) {
 							this.deferredImportSelectors.add(
 									new DeferredImportSelectorHolder(configClass, (DeferredImportSelector) selector));
 						}
 						else {
-							//这里获取到的数组，就是实现了ImportSelector接口的类中selectImports方法返回的值(这里返回的就是要注入的bean的全类名)
 							String[] importClassNames = selector.selectImports(currentSourceClass.getMetadata());
 							Collection<SourceClass> importSourceClasses = asSourceClasses(importClassNames);
-							//这里会进行一次递归调用，循环importSelector方法中返回的全类名数组，防止要导入的bean也是ImportSelector的实现类
 							processImports(configClass, currentSourceClass, importSourceClasses, false);
 						}
 					}
 					else if (candidate.isAssignable(ImportBeanDefinitionRegistrar.class)) {
 						// Candidate class is an ImportBeanDefinitionRegistrar ->
 						// delegate to it to register additional bean definitions
+						/**
+						 * 如果是ImportBeanDefinitionRegistrar的实现类，那就在这里进行处理
+						 * 这里的处理也比较简单：就是将registrar和metadata存入到importBeanDefinitionRegistrars这个map中
+						 */
 						Class<?> candidateClass = candidate.loadClass();
 						ImportBeanDefinitionRegistrar registrar =
 								BeanUtils.instantiateClass(candidateClass, ImportBeanDefinitionRegistrar.class);
-						//判断是否有awareMethod
+						//实例化ImportBeanDefinitionRegistrar之后，判断是否有awareMethod
 						ParserStrategyUtils.invokeAwareMethods(
 								registrar, this.environment, this.resourceLoader, this.registry);
+						//把实例好的ImportBeanDefinitionRegistrar对象，放到了一个map中，在后面，会循环这个map
 						configClass.addImportBeanDefinitionRegistrar(registrar, currentSourceClass.getMetadata());
 					}
 					else {
@@ -703,7 +724,11 @@ class ConfigurationClassParser {
 						// process it as an @Configuration class
 						this.importStack.registerImport(
 								currentSourceClass.getMetadata(), candidate.getMetadata().getClassName());
-						//在这里，会对importSelector要注入的bean，进行一次处理，防止新注入的bean是一个配置类，所以在这里会去进行一次解析
+						/**
+						 * 这里就是对非ImportSelector和非ImportBeanDefinitionRegistrar的普通bean进行处理；
+						 * 这里会对bean进行一次处理，防止新注入的bean是一个配置类；
+						 * 处理完之后，会将bean存入到configurationClasses这个集合中
+						 */
 						processConfigurationClass(candidate.asConfigClass(configClass));
 					}
 				}

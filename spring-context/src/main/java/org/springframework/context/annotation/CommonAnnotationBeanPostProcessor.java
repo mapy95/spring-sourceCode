@@ -535,6 +535,7 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 		else {
 			/**
 			 * 之所以说@Resource是按照name来注入的，就是这里的代码可以佐证这个观点
+			 * 这里，直接根据name从单实例池中获取bean，这里是从单实例池中获取，如果存在就返回，不存在就初始化
 			 *
 			 */
 			resource = factory.getBean(name, element.lookupType);
@@ -640,8 +641,8 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 		}
 
 		/**
-		 * @param target
-		 * @param requestingBeanName
+		 * @param target:当前扫描的bean
+		 * @param requestingBeanName：当前扫描的beanName
 		 * @return
 		 *
 		 * @Resource注解源码解析：

@@ -401,6 +401,13 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		return resolvedBeanNames;
 	}
 
+	/**
+	 *
+	 * @param type
+	 * @param includeNonSingletons
+	 * @param allowEagerInit
+	 * @return
+	 */
 	private String[] doGetBeanNamesForType(ResolvableType type, boolean includeNonSingletons, boolean allowEagerInit) {
 		List<String> result = new ArrayList<>();
 
@@ -410,6 +417,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			// is not defined as alias for some other bean.
 			if (!isAlias(beanName)) {
 				try {
+					// 这里是合并bean的逻辑，会获取到当前所有的bdname;然后依次遍历
 					RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
 					// Only check bean definition if it is complete.
 					if (!mbd.isAbstract() && (allowEagerInit ||
@@ -746,6 +754,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			 * 因为一个子BeanDefinition可以继承父beanDefinition，一些共性的信息可以放到父BeanDefinition中，所以，在对bean进行初始化的时候，都要对相应的beanDefinition进行合并的操作，得到RootBeanDefinition;比如：
 			 *  RootBeanDefinitionA设置需要注入name属性
 			 *  BeanDefinitionB设置需要注入type属性，再设置BeanDefinitionB 继承RootBeanDefinitionA,假如在这里不合并rootBeanDefinitionA，那么B这个bd需要注入的属性就只有type，不会有name，那也就不是我们想要的bd了；所以这里要把子bd的属性合并到新的RootBeanDefinition中
+			 *
+			 *  并且，spring在初始化bean的过程中，会对bd进行一些校验(比如：是否是单实例的，是否是抽象的等);所以：这里要先把bd进行合并，获取到父类的bd属性信息
+			 *
 			 */
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
 			// 非抽象、非懒加载、单实例的bean
@@ -1074,7 +1085,10 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			return new Jsr330ProviderFactory().createDependencyProvider(descriptor, requestingBeanName);
 		}
 		else {
-			//这里应该是获取加了@Lazy注解的注入属性，这里返回的应该是一个代理对象
+			/**
+			 * 如果当前要注入的bean加了@Lazy注解，那么会返回一个代理对象
+			 * 否则的话，就去查找要注入的属性
+			 */
 			Object result = getAutowireCandidateResolver().getLazyResolutionProxyIfNecessary(
 					descriptor, requestingBeanName);
 			if (result == null) {
@@ -1115,7 +1129,6 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			 * 比如：
 			 * @Autowired
 			 * List<User> users;
-			 *
 			 *
 			 * 这种是可以把当前所有的接口实现类都注入进来
 			 */
@@ -1205,6 +1218,18 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		}
 	}
 
+	/**
+	 * 这里是处理注入的是List或者map的场景，主要区分了三种
+	 * 数组
+	 * collection
+	 * map
+	 *
+	 * @param descriptor
+	 * @param beanName
+	 * @param autowiredBeanNames
+	 * @param typeConverter
+	 * @return
+	 */
 	@Nullable
 	private Object resolveMultipleBeans(DependencyDescriptor descriptor, @Nullable String beanName,
 			@Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) {
@@ -1324,10 +1349,17 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	protected Map<String, Object> findAutowireCandidates(
 			@Nullable String beanName, Class<?> requiredType, DependencyDescriptor descriptor) {
 
-		//根据类型，获取到当前容器中的beanName
+		/**
+		 * 根据类型，获取当前beanDefinitionMap中的beanName，注意：这里是从beanDefinitionMap中获取的，并不是直接从spring
+		 * 容器中获取
+		 */
 		String[] candidateNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 				this, requiredType, true, descriptor.isEager());
 		Map<String, Object> result = new LinkedHashMap<>(candidateNames.length);
+		/**
+		 * resolvableDependencies：这里来遍历这个集合，判断要注入的bean是否是该类型的
+		 * resolvableDependencies这个集合，默认有四个值
+		 */
 		for (Class<?> autowiringType : this.resolvableDependencies.keySet()) {
 			if (autowiringType.isAssignableFrom(requiredType)) {
 				Object autowiringValue = this.resolvableDependencies.get(autowiringType);
@@ -1341,7 +1373,6 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		/**
 		 * 确切的说，是在isAutowireCandidate里面对Qualifier注解进行了判断
 		 *  org.springframework.beans.factory.annotation.QualifierAnnotationAutowireCandidateResolver#isAutowireCandidate(org.springframework.beans.factory.config.BeanDefinitionHolder, org.springframework.beans.factory.config.DependencyDescriptor)
-		 *  如果
 		 */
 		for (String candidate : candidateNames) {
 			if (!isSelfReference(beanName, candidate) && isAutowireCandidate(candidate, descriptor)) {
@@ -1396,16 +1427,25 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	 * @param descriptor the target dependency to match against
 	 * @return the name of the autowire candidate, or {@code null} if none found
 	 */
-	//处理 qualifier注解
+	/**
+	 * 如果根据type获取到有多个符合的bean，那就来这个方法中，推断出其中的一个
+	 * @param candidates：推断出来的多个bean
+	 * @param descriptor：要注入的属性对应的类型，如果是接口，那这里就是接口的类型
+	 * @return
+	 */
 	@Nullable
 	protected String determineAutowireCandidate(Map<String, Object> candidates, DependencyDescriptor descriptor) {
 		Class<?> requiredType = descriptor.getDependencyType();
-		//判断哪个bean有@Primary注解，返回注解对应的beanName
+		/**
+		 * 判断哪个bean有@Primary注解，返回注解对应的beanName
+		 */
 		String primaryCandidate = determinePrimaryCandidate(candidates, requiredType);
 		if (primaryCandidate != null) {
 			return primaryCandidate;
 		}
-		//如果都没有添加@Primary注解，那就判断bean是否有添加@Priority注解，注解值越小，优先级越高；返回优先级高的beanName
+		/**
+		 * 如果都没有添加@Primary注解，那就判断bean是否有添加@Priority注解，注解值越小，优先级越高；返回优先级高的beanName
+		 */
 		String priorityCandidate = determineHighestPriorityCandidate(candidates, requiredType);
 		if (priorityCandidate != null) {
 			return priorityCandidate;
@@ -1421,6 +1461,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		 * Service service01
 		 *  }
 		 *   如果service有多个实现类，其实注入的是service01，就是这里判断的
+		 *
+		 *   这里我觉得，也是我们平常所说的，如果根据type找到多个，或者没有找到，就根据name来注入，这里就是根据name来注入的这一步
 		 */
 		for (Map.Entry<String, Object> entry : candidates.entrySet()) {
 			String candidateName = entry.getKey();
@@ -1440,6 +1482,13 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	 * @param requiredType the target dependency type to match against
 	 * @return the name of the primary candidate, or {@code null} if none found
 	 * @see #isPrimary(String, Object)
+	 */
+	/**
+	 * 判断接口的多个实现类中，哪个实现类，添加了@Primary注解，哪个加了该注解，就优先返回，但是，如果多个实现类
+	 * 都添加了@Primary注解，就会抛出异常(1503行这里的异常信息)
+	 * @param candidates
+	 * @param requiredType
+	 * @return
 	 */
 	@Nullable
 	protected String determinePrimaryCandidate(Map<String, Object> candidates, Class<?> requiredType) {
@@ -1479,6 +1528,12 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	 * or {@code null} if none found
 	 * @see #getPriority(Object)
 	 */
+	/**
+	 * 如果一个接口的多个实现类，都没有添加@Primary注解，那么会判断是否有添加@Priority注解，并获取注解value较小的返回
+	 * @param candidates
+	 * @param requiredType
+	 * @return
+	 */
 	@Nullable
 	protected String determineHighestPriorityCandidate(Map<String, Object> candidates, Class<?> requiredType) {
 		String highestPriorityBeanName = null;
@@ -1487,6 +1542,12 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			String candidateBeanName = entry.getKey();
 			Object beanInstance = entry.getValue();
 			if (beanInstance != null) {
+				/**
+				 * candidatePriority：当前bean的@Priority注解的value值
+				 * 如果是解析的第一个实现类中的value，那么，会把第一次解析出来的@Priority的value，设置为highestPriority
+				 * 如果后面解析到的实现类中的value值比这个值小，就把当前解析到的value赋值给highestPriority，同步，highestPriorityBeanName也进行修改
+				 * 但是，如果优先级最高(value值最小)的bean有多个，那就会抛出异常
+				 */
 				Integer candidatePriority = getPriority(beanInstance);
 				if (candidatePriority != null) {
 					if (highestPriorityBeanName != null) {

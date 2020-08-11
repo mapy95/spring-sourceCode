@@ -572,7 +572,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Register bean processors that intercept bean creation.
 				/**
-				 *  注册beanPostProcessor;在方法里面
+				 *  注册beanPostProcessor;在该方法里面
 				 *  会先把beanPostProcessor进行分类，然后按照beanPostProcessor的name从spring容器中获取bean对象，如果spring容器中没有，就创建;所以如果一个beanDefinition是后置处理器，会这这里进行实例化，然后存放到单实例池中
 				 *  然后再调用的是 beanFactory.addBeanPostProcessor(postProcessor);
 				 * 把所有的beanPostProcessor放到了beanPostProcessors中，在后面初始化bean的时候，如果需要调用后置处理器，就会遍历这个list，
@@ -778,11 +778,25 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		 * 自己写的可以加@Component，也可以不加
 		 * 如果加了注解，getBeanFactoryPostProcessors()这里是获取不到的，加了注解的beanFactoryPostProcessor是spring自己扫描的
 		 *
-		 *  为什么得不到，因为这个方法是直接获取一个list,这个list是在AnnotationConfigApplicationContext中被定义的,只有在调用ac.addBeanFactoryPostProcessor();的时候，才会给list赋值
+		 *  这里为什么得不到@Component注解修饰的BeanFactoryPostProcessor的实现类？因为这个方法是直接获取一个list,这个list是在AnnotationConfigApplicationContext中被定义的,只有在调用ac.addBeanFactoryPostProcessor();的时候，才会给list赋值
 		 *
 		 * 简单而言，这里说的自定义是指：程序员自己的bean，并且没有加@Component注解的类；（手动添加到spring容器中的）如果没有加注解，怎么交给spring呢？
 		 * 在调用annotationConfigApplicationContext的refresh()方法之前  将自定义的beanFactoryPostProcessor添加到容器ac中
+		 *
+		 *
+		 * 总结而言：
+		 * 	我们自己实现一个beanFactoryPostProcessor的实现类，交给spring有两种方式
+		 * 	1.通过api的方式：ac.addBeanFactoryPostProcessor();
+		 * 		但是这种方式，需要在refresh()方法之前执行，否则是没有意义的
+		 * 		这种方式注入的实现类如果是BeanDefinitionRegistrarPostProcessor的实现类，是在spring自动扫描之前就执行的，
+		 * 		如果是BeanFactoryPostProcessor的实现类，则是在spring自动扫描之后执行的；
+		 * 	2.通过添加@Component注解，这种方式是spring在扫描配置类的时候，会对@Component的实现类进行处理
+		 *
+		 * 	而这里的getBeanFactoryPostProcessors(); 就是获取通过api的形式注入的beanFactoryPostProcessor实现类
+		 *
+		 *
 		 */
+
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found in the meantime

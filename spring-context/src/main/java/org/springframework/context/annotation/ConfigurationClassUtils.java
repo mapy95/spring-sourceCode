@@ -86,6 +86,7 @@ abstract class ConfigurationClassUtils {
 
 		AnnotationMetadata metadata;
 		/**
+		 * 序号1：
 		 * 如果bean是注解版的，就调用AnnotatedBeanDefinition获取元数据
 		 * 如果是非注解的，就用AbstractBeanDefinition获取元数据
 		 *
@@ -117,11 +118,17 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
-		//如果元数据包含@Configuration注解，就执行下面的方法
+		/**
+		 * 序号2：
+		 * 这里的if else判断，简单而言，就是一句话：
+		 * 	如果当前bean加了@Configuration注解，就是全配置类(configurationClass属性为full)
+		 * 	如果只是加了@Component、@ComponentScan、@Import、@ImportResource注解，那就是一个普通的bean(configurationClass属性为lite)
+		 */
 		if (isFullConfigurationCandidate(metadata)) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
 		/**
+		 * 序号3：
 		 * else里面是校验当前bean是否包含
 		 * 	candidateIndicators.add(Component.class.getName());
 		 * 	candidateIndicators.add(ComponentScan.class.getName());
@@ -178,11 +185,23 @@ abstract class ConfigurationClassUtils {
 	 */
 	public static boolean isLiteConfigurationCandidate(AnnotationMetadata metadata) {
 		// Do not consider an interface or an annotation...
+		/**
+		 * 如果是接口，就返回false，不处理
+		 */
 		if (metadata.isInterface()) {
 			return false;
 		}
 
 		// Any of the typical annotations found?
+		/**
+		 * 这里的candidateIndicators是在一个静态代码块中进行初始化的
+		 * static {
+		 * 		candidateIndicators.add(Component.class.getName());
+		 * 		candidateIndicators.add(ComponentScan.class.getName());
+		 * 		candidateIndicators.add(Import.class.getName());
+		 * 		candidateIndicators.add(ImportResource.class.getName());
+		 *  }
+		 */
 		for (String indicator : candidateIndicators) {
 			if (metadata.isAnnotated(indicator)) {
 				return true;

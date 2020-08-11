@@ -174,12 +174,15 @@ class ConfigurationClassBeanDefinitionReader {
 	}
 
 	/**
+	 * 对配置类中的@Bean修饰的方法中要注入的bean进行转换
+	 * 将bean转换为beanDefinition
 	 * Read the given {@link BeanMethod}, registering bean definitions
 	 * with the BeanDefinitionRegistry based on its contents.
 	 */
 	private void loadBeanDefinitionsForBeanMethod(BeanMethod beanMethod) {
 		ConfigurationClass configClass = beanMethod.getConfigurationClass();
 		MethodMetadata metadata = beanMethod.getMetadata();
+		// 获取@Bean对应方法的 方法名
 		String methodName = metadata.getMethodName();
 
 		// Do we need to mark the bean as skipped by its condition?
@@ -191,10 +194,12 @@ class ConfigurationClassBeanDefinitionReader {
 			return;
 		}
 
+		// 这里应该是判断当前方法是否有@Bean注解
 		AnnotationAttributes bean = AnnotationConfigUtils.attributesFor(metadata, Bean.class);
 		Assert.state(bean != null, "No @Bean annotation attributes");
 
 		// Consider name and any aliases
+		// 获取@Bean注解中配置的name属性；如果配置了多个名称，就用第一个；如果未配置name属性，就用@Bean修饰的方法名
 		List<String> names = new ArrayList<>(Arrays.asList(bean.getStringArray("name")));
 		String beanName = (!names.isEmpty() ? names.remove(0) : methodName);
 
@@ -217,7 +222,7 @@ class ConfigurationClassBeanDefinitionReader {
 		beanDef.setResource(configClass.getResource());
 		beanDef.setSource(this.sourceExtractor.extractSource(metadata, configClass.getResource()));
 
-		//如果@Bean的方法是static，那么会给bean添加一个factoryMethod
+		//如果@Bean的方法是static，会设置beanDefinition的FactoryMethodName
 		if (metadata.isStatic()) {
 			// static @Bean method
 			beanDef.setBeanClassName(configClass.getMetadata().getClassName());
@@ -225,24 +230,29 @@ class ConfigurationClassBeanDefinitionReader {
 		}
 		else {
 			// instance @Bean method
+			// 否则，在setUniqueFactoryMethodName()方法中，设置beanDefinition的factoryMethodName
 			beanDef.setFactoryBeanName(configClass.getBeanName());
 			beanDef.setUniqueFactoryMethodName(methodName);
 		}
+		// 这里可以看到，对于@Bean注入的bean，默认的注入模型是AUTOWIRE_CONSTRUCTOR
 		beanDef.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_CONSTRUCTOR);
 		beanDef.setAttribute(RequiredAnnotationBeanPostProcessor.SKIP_REQUIRED_CHECK_ATTRIBUTE, Boolean.TRUE);
 
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(beanDef, metadata);
 
+		// 如果在@Bean注解中指定了注入模型，就用指定的；如果未指定，就使用默认的AUTOWIRE_CONSTRUCTOR
 		Autowire autowire = bean.getEnum("autowire");
 		if (autowire.isAutowire()) {
 			beanDef.setAutowireMode(autowire.value());
 		}
 
+		// 设置bean的初始化方法
 		String initMethodName = bean.getString("initMethod");
 		if (StringUtils.hasText(initMethodName)) {
 			beanDef.setInitMethodName(initMethodName);
 		}
 
+		// 设置bean的销毁方法
 		String destroyMethodName = bean.getString("destroyMethod");
 		beanDef.setDestroyMethodName(destroyMethodName);
 
@@ -250,6 +260,7 @@ class ConfigurationClassBeanDefinitionReader {
 		ScopedProxyMode proxyMode = ScopedProxyMode.NO;
 		AnnotationAttributes attributes = AnnotationConfigUtils.attributesFor(metadata, Scope.class);
 		if (attributes != null) {
+			// 设置bean的scope
 			beanDef.setScope(attributes.getString("value"));
 			proxyMode = attributes.getEnum("proxyMode");
 			if (proxyMode == ScopedProxyMode.DEFAULT) {
@@ -271,6 +282,7 @@ class ConfigurationClassBeanDefinitionReader {
 			logger.debug(String.format("Registering bean definition for @Bean method %s.%s()",
 					configClass.getMetadata().getClassName(), beanName));
 		}
+		// 将@Bean对于的bean存入到beanDefinitionMap中
 		this.registry.registerBeanDefinition(beanName, beanDefToRegister);
 	}
 

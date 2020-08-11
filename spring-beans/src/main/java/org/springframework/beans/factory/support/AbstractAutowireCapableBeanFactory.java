@@ -569,8 +569,15 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			if (!mbd.postProcessed) {
 				try {
 					/**
-					 * mpy 第三次调用后置处理器  缓存注解信息;通过后置处理器合并beanDefinition;在这里调用
+					 * mpy 第三次调用后置处理器  缓存注解信息;通过后置处理器处理合并之后的beanDefinition;在这里调用
 					 * 后置处理器的时候，会把当前bean所需要注入的bean存放到checkedElements中，在属性注入的时候，会用到
+					 *
+					 * 这里说白了：就是提前对bean中的@Autowired、@Resource注解进行解析，获取到要注入的bean
+					 *
+					 * spring原生的后置处理器，在这里执行的有三个：
+					 * AutowiredAnnotationBeanPostProcessor:处理@Autowired注解
+					 * CommonAnnotationBeanPostProcessor:处理@Resource注解
+					 * InitDestroyAnnotationBeanPostProcessor：处理初始化回调方法(@PostConstruct和@PreDestroy注解)
 					 */
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				}
@@ -594,10 +601,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			/**
 			 * mpy 第四次调用后置处理器 获取一个提前暴露的对象 objectFactory 用来解决循环依赖
 			 * 这里还有一个关键的作用，可以追进去看一下，这里可能会完成动态代理对象的生成(AOP)
-			 * 正常情况下，AOP的动态代理是在调用org.springframework.beans.factory.config.BeanPostProcessor#postProcessAfterInitialization(java.lang.Object, java.lang.String)的时候，才会生成
+			 * 正常情况下，AOP的动态代理是在调用org.springframework.beans.factory.config.BeanPostProcessor#postProcessAfterInitialization(java.lang.Object, java.lang.String)的时候，才会生成(也即：第八个后置处理器)
 			 * 但是，如果是循环依赖的话，会在 org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference(java.lang.Object, java.lang.String) 中完成
 			 *
 			 * 这里getEarlyBeanReference();不会立即执行，而是在从二级缓存中获取对象的时候，会调用该方法，在该方法中完成动态代理
+			 *
 			 */
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
@@ -1070,7 +1078,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 *   synthetic
 	 *    和spring中的合成类、合成方法、合成属性有关系
 	 *
-	 *  这里的意思是：在开始spring生命周期方法之前，先判断是否返回了bean对象，如果返回了，就不再调用bean的声明周期方法
+	 *  这里的意思是：在开始spring生命周期方法之前，先判断是否返回了bean对象，如果返回了，就不再调用bean的生命周期方法
 	 *   进行判断的前提是：当前bean不是合成类，并且当前spring容器中有InstantiationAwareBeanPostProcessor的实现类
 	 *   hasInstantiationAwareBeanPostProcessor是在refresh方法中，执行 registerBeanPostProcessors()方法的时候，
 	 *   会把bean的后置处理器添加到 beanFactory中，添加的时候，会判断当前bean是否是接口的实现类
@@ -1141,6 +1149,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					"Bean class isn't public, and non-public access not allowed: " + beanClass.getName());
 		}
 
+		/**
+		 * 如果在bean对应的beanDefinition中，设置一个InstanceSupplier，那么，spring就不会调用后面推断构造函数的逻辑
+		 */
 		Supplier<?> instanceSupplier = mbd.getInstanceSupplier();
 		if (instanceSupplier != null) {
 			return obtainFromSupplier(instanceSupplier, beanName);
@@ -1150,6 +1161,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		 * mpy 如果工厂方法不为空，就通过工厂方法构建bean对象  待学习
 		 *
 		 * 需要了解什么是factoryMethod
+		 *
+		 * 如果我们是通过@Bean注解，来注入bean的话，在将bean对象转换成beanDefinition对象时，会设置一个factoryMethod
 		 */
 		if (mbd.getFactoryMethodName() != null)  {
 			return instantiateUsingFactoryMethod(beanName, mbd, args);
@@ -1159,7 +1172,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		/**
 		 *
 		 * 当多次构建同一个bean的时候，可以使用这个shortcut。
-		 * 也就是说，如果第一次解析一个bean，推断出来
+		 * 也就是说，如果第一次解析一个bean，推断出来，后面再来对bean进行推断的时候  就无需再次执行所有代码了
 		 */
 		boolean resolved = false;
 		boolean autowireNecessary = false;
@@ -1188,6 +1201,20 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		/**
 		 * mpy 实例化对象里面：第二次调用后置处理器  由后置处理器决定返回哪些构造函数(推断使用哪个构造方法)
 		 *  当注入模型为0 的时候 就是autowireMode = 0；无论类中提供了多少个构造函数  这里返回的ctors都是0
+		 *
+		 *  autowireConstructor方法确切的说，是从推断出来的构造函数中，选择出一个，判断到底要用哪个来初始化
+		 *  	如果没有指定注入模型，推断出来返回了一个或者多个可用的构造函数，也会执行这个方法
+		 *  	如果指定了注入模型，即使推断出来的是null(也即使用空参构造函数)，也会执行这个方法
+		 *
+		 *  所以：
+		 *  	determineConstructorsFromBeanPostProcessors：可以理解为手动装配的构造函数推断
+		 *  	autowireConstructor：可以理解为自动装配的构造函数推断(这样说，也有歧义，如果注入模型是0，但是返回的ctors不是null，也会进到这个方法中)
+		 *  因为：determineConstructorsFromBeanPostProcessors在执行之后，推断出来使用空参构造函数、或者使用带参构造函数，如果autowiredMode为3，在autowireConstructor还会推断一次
+		 *  autowireConstructor方法中，无论ctors为null还是有值，都会再进行一次推断
+		 *
+		 *
+		 *  根据源码来看，ctors只会返回一个或者返回null
+		 *
 		 */
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
 		if (ctors != null || mbd.getResolvedAutowireMode() == AUTOWIRE_CONSTRUCTOR ||
@@ -1196,7 +1223,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// No special handling: simply use no-arg constructor.
-		//使用默认的构造函数初始化
+		/**
+		 * 使用默认的构造函数初始化
+		 *
+		 * 如果bean的autowireMode为0，且没有在构造方法指定@Autowired注解，表示不自动注入，那么，一定是会执行这里的方法的，也即：通过默认的
+		 * 无参构造函数执行
+		 */
 		return instantiateBean(beanName, mbd);
 	}
 
@@ -1365,8 +1397,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		/**
 		 * 第五次调用后置处理器  判断是否需要填充属性；返回false，表示无需进行属性注入
-		 * 是调用的postProcessorAfterInstantiation方法，在这个方法里面，如果返回false，就不会再进行属性注入；所以，如果程序员要对每个bean不进行属性注入
-		 * 一定要在扩展方法中加上对bean的判断，否则的话，会导致所有的bean不进行属性注入
+		 * 是调用的postProcessorAfterInstantiation方法，在这个方法里面，如果返回false，就不会再进行属性注入；
+		 * 所以，如果程序员要对所有注入的bean都不进行属性注入，就自己实现该方法，返回false即可(但是这种需求，一般也很少见吧)
+		 * 但是如果，只是要某一个bean不需要spring帮我们完成属性注入，一定要在扩展方法中加上对beanName的判断，否则的话，会导致所有的bean不进行属性注入
+		 * 因为每个bean在初始化的时候，都会去调用我们自己扩展的方法，只要有一个后置处理器的方法返回false，就不会属性填充了
+		 *
 		 */
 		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
@@ -1384,19 +1419,31 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			return;
 		}
 
-		//mbd.setPropertyValues()  获取到 给beanDefinition设置的属性值
+		/**
+		 * 获取到的是通过mbd.setPropertyValues() 给beanDefinition设置的待注入属性值
+		 */
 		PropertyValues pvs = (mbd.hasPropertyValues() ? mbd.getPropertyValues() : null);
 
 		/**
+		 * 首先解释一个名词：@Autowired和@Resource，我们通常称之为自动注入，@Autowired注解先根据name找，再根据type找，这样说，其实不严谨
+		 * 我们姑且先认为@Autowired和@Resource是手动注入，并且这里的先根据name，再根据type找的这个说发，会在后面进行解释
+		 * 我们认为将AutowireMode注入模型设置为AUTOWIRE_BY_NAME/AUTOWIRE_BY_TYPE/AUTOWIRE_CONSTRUCTOR的为自动注入
+		 *
+		 * 下面代码开始，就是完成注入的，spring在这里完成注入，可以大致分为两个类型：
+		 * 自动注入：
+		 *	下面的newPvs是根据自动注入模型找到的要注入的属性，然后再下面(applyPropertyValues(beanName, mbd, bw, pvs);)，会进行统一的注入
+		 *
+		 *
+		 * 手动注入：
+		 * 	在上面一行代码中，获取到程序员手动在代码中声明的要注入的属性
+		 * 	ac.getBeanDefinition("ccc").getPropertyValues().add("name","mpyTest"); 这种就是在代码中手动声明要注入的属性
+		 *	在后置处理器中，根据@Autowired注解或者@Resource注解，获取到要注入的属性
+		 *
+		 * 	对于手动注入，我们所说的byType并不是从单实例池中根据类型查找的，而是从beanDefinitionMap中查找的
+		 *
+		 *
 		 * spring默认的注入模型是 AUTOWIRE_NO
 		 *
-		 * 我们可以将autowireMode设置过值的，称之为自动注入，将@Autowired和@Resource注解的  称之为手动注入
-		 * 自动注入的时候，下面的newPvs是根据自动注入模型找到的要注入的属性，然后再下面，会进行统一的注入
-		 * 如果是手动注入，那么是在上面一行代码中，获取到程序员手动在代码中声明的要注入的属性
-		 * ac.getBeanDefinition("ccc").getPropertyValues().add("name","mpyTest"); 这种就是在代码中手动声明要注入的属性
-		 *
-		 * 自动注入才是我们真正说的 byType  byName,在后面的源码中，我会解释
-		 * 对于手动注入，我们所说的byType并不是从单实例池中根据类型查找的
 		 */
 		if (mbd.getResolvedAutowireMode() == AUTOWIRE_BY_NAME || mbd.getResolvedAutowireMode() == AUTOWIRE_BY_TYPE) {
 			MutablePropertyValues newPvs = new MutablePropertyValues(pvs);
@@ -1514,7 +1561,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		Set<String> autowiredBeanNames = new LinkedHashSet<>(4);
-		//这行代码是获取到当期那bean中所有的writeMethod方法，个人理解，就是set方法
+		/**
+		 * 这行代码是获取到当前bean中所有的writeMethod方法，个人理解，就是set方法对应的集合
+		 */
 		String[] propertyNames = unsatisfiedNonSimpleProperties(mbd, bw);
 		for (String propertyName : propertyNames) {
 			try {

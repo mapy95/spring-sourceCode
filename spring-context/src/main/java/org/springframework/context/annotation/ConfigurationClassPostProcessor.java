@@ -280,7 +280,12 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		 * 业务类，其他的都是spring自带的后置处理器
 		 */
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
-		//获取在 new AnnotatedBeanDefinitionReader(this);中注入的spring自己的beanPostProcessor
+		/**
+		 * 序号1：
+		 * 获取所有BeanDefinitionNames，这里第一次进来的时候，理论上只会有spring自带的和我们注入的配置类
+		 *  	1.new AnnotatedBeanDefinitionReader(this);中注入的spring自己的beanPostProcessor;
+		 * 		2.以及添加到beanDefinitionMap中的配置类
+		 */
 		String[] candidateNames = registry.getBeanDefinitionNames();
 
 		for (String beanName : candidateNames) {
@@ -289,8 +294,16 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			 */
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
 			/**
-			 * 如果bean是配置类，configurationClass就是full，否则就是lite
-			 * 这里，如果当前bean 的configurationClass属性已经被设置值了，说明当前bean已经被解析过来，就无需再次解析
+			 *
+			 * 序号2：
+			 * 在配置类被添加到beanDefinitionMap的时候，是不会给configurationClass这个属性赋值的
+			 * 如果bean是配置类，configurationClass属性值就是full，否则就是lite
+			 * 这里，如果当前bean 的configurationClass属性已经被设置值了，说明当前bean已经被解析过来(也即：后面的代码已经执行过了)，就无需再次解析
+			 *
+			 * 被解析是指：在判断bean是全配置类(full)或者是普通bean(lite)之后，会把configurationClass属性值添加到beanDefinition的attributes
+			 * 这个map中
+			 *
+			 *
 			 */
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef) ||
 					ConfigurationClassUtils.isLiteConfigurationClass(beanDef)) {
@@ -298,13 +311,17 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
 			}
-			//校验bean是否包含@Configuration  也就是校验bean是哪种配置类？注解？还是普通的配置类
+			/**
+			 * 序号3：
+			 * 校验bean是否包含@Configuration  也就是校验bean是哪种配置类？全配置类？还是普通的配置类
+			 */
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
 			}
 		}
 
 		// Return immediately if no @Configuration classes were found
+		//序号4：表示当前未执行的bean为空，return即可；防止重复解析
 		if (configCandidates.isEmpty()) {
 			return;
 		}
@@ -353,6 +370,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			 *  如果将bean存入到beanDefinitionMap第三步
 			 *
 			 *  这里的candidates的个数是由项目中 配置文件的数量来决定的(或者说加了@Configuration或者@ComponentScan或者@Component注解的类)
+			 *  上面是对bean的解析，下面这一步是对bean中的注释进行解析
 			 */
 			parser.parse(candidates);
 			parser.validate();

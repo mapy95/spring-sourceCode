@@ -236,6 +236,15 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		metadata.checkConfigMembers(beanDefinition);
 	}
 
+	/**
+	 * 推断构造函数
+	 *
+	 *
+	 * @param beanClass
+	 * @param beanName
+	 * @return
+	 * @throws BeanCreationException
+	 */
 	@Override
 	@Nullable
 	public Constructor<?>[] determineCandidateConstructors(Class<?> beanClass, final String beanName)
@@ -308,7 +317,11 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 					Constructor<?> primaryConstructor = BeanUtils.findPrimaryConstructor(beanClass);
 					//nonSyntheticConstructors:这个变量是用来
 					int nonSyntheticConstructors = 0;
-					//遍历当前bean的所有构造函数
+					/**
+					 * 遍历当前bean的所有构造函数
+					 * 这个for循环干的事情：
+					 * 	如果在构造方法上，没有加@Autowired或者@Value注解，那这个遍历循环，就是找到了默认的构造函数(也即：参数为空的构造函数)
+					 */
 					for (Constructor<?> candidate : rawCandidates) {
 						//判断当前构造方法是否是混合构造方法
 						if (!candidate.isSynthetic()) {
@@ -322,9 +335,13 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 						if (ann == null) {
 							Class<?> userClass = ClassUtils.getUserClass(beanClass);
 							/**
-							 * 判断构造方法对应的类和传过来的类是否是同一个
+							 * 判断构造方法对应的类和bd的类是否是同一个
+							 * 	userClass：构造方法对应的类
+							 * 	beanClass：是从上面方法中入参来的，网上追溯代码，可以发现，是从beanDefinition对象中获取的beanClass属性
 							 * 这里应该是防止当前bean是一个被代理的对象
 							 * 上面的userClass中判断beanClass是否包含 $$；如果包含，说明是代理对象
+							 *
+							 * 这里：beanClass和userClass不相同的场景，可能是factoryBean、或者内部类吧
 							 */
 							if (userClass != beanClass) {
 								try {
@@ -341,6 +358,8 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 							/**
 							 * 如果ann不为null(表示当前bean中的构造函数中有加@Autowired)，如果有多个构造函数都加了@Autowired，
 							 * 就会抛出异常
+							 *
+							 * 我们称之为加了@Autowired注解的构造函数为requiredConstructor，如果一个类中，有多个，就会抛出异常
 							 */
 							if (requiredConstructor != null) {
 								throw new BeanCreationException(beanName,
@@ -348,8 +367,18 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 										". Found constructor with 'required' Autowired annotation already: " +
 										requiredConstructor);
 							}
+							//应该是获取到@Autowired注解中required属性的值
 							boolean required = determineRequiredStatus(ann);
+							/**
+							 * 如果required为true，表示当前构造方法上加了@Autowired注解或者是@Value注解，且required属性是true；说明当前的构造
+							 * 函数是必要的
+							 *
+							 * 如果推断出来的可用的构造函数已经不是null了，就会抛出异常
+							 *
+							 * 如果required是false，那么，就会添加到candidates中
+							 */
 							if (required) {
+								//candidates 存储的是当前推断出来的可用的构造函数
 								if (!candidates.isEmpty()) {
 									throw new BeanCreationException(beanName,
 											"Invalid autowire-marked constructors: " + candidates +
@@ -404,8 +433,8 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 	public PropertyValues postProcessPropertyValues(
 			PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeanCreationException {
 		/**
-		 *  个人理解：这里是根据beanName查找当前bean是否有要注入的bean
-		 *  injectedElement中存放了当前bean要注入的对象
+		 *  获取当前bean是否有通过@Autowired注解注入的bean，如果有就，进行注入；这里会在postProcessMergedBeanDefinition方法中，提前进行查找一遍
+		 *  injectedElement中存放了当前bean要注入的对象(这里存储的是通过@Autowired注解注入的bean)
 		 */
 
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
@@ -623,12 +652,19 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		 *
 		 * @Autowired注解源码 二
 		 *  这是主要是处理属性注入的方法 @Autowired
+		 *
+		 *  这里处理AutowiredFieldElement  field上加了@Autowired注解的属性
+		 *
+		 *  对于通过@Autowired或者@Resource注解注入的bean，spring底层都是通过field.set的方法，完成属性注入的
 		 */
 		@Override
 		protected void inject(Object bean, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
 			//field是当前bean依赖的bean对象，比如A中注入了B，那这里的field就是 private com.xxxx.B com.XXX.A.b
 			Field field = (Field) this.member;
 			Object value;
+			/**
+			 * 这里的cache会在第一次处理完属性注入之后，设置为true
+			 */
 			if (this.cached) {
 				value = resolvedCachedArgument(beanName, this.cachedFieldValue);
 			}
@@ -645,6 +681,9 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 				catch (BeansException ex) {
 					throw new UnsatisfiedDependencyException(null, beanName, new InjectionPoint(field), ex);
 				}
+				/**
+				 * 在第一次解析完，要注入的bean之后，将其
+				 */
 				synchronized (this) {
 					if (!this.cached) {
 						if (value != null || this.required) {
@@ -691,6 +730,14 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 			this.required = required;
 		}
 
+		/**
+		 * AutowiredMethodElement
+		 * 如果是在方法上加了@Autowired注解，那么是在这里进行了属性注入
+		 * @param bean
+		 * @param beanName
+		 * @param pvs
+		 * @throws Throwable
+		 */
 		@Override
 		protected void inject(Object bean, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
 			if (checkPropertySkipping(pvs)) {

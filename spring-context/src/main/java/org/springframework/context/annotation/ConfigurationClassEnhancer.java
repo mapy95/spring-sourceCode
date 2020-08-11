@@ -329,6 +329,15 @@ class ConfigurationClassEnhancer {
 		 * @throws Throwable as a catch-all for any exception that may be thrown when invoking the
 		 * super implementation of the proxied method i.e., the actual {@code @Bean} method
 		 */
+		/**
+		 * 如果是加了@Configuration的配置类中的@Bean在实例化的时候，会调用到这里
+		 * @param enhancedConfigInstance
+		 * @param beanMethod
+		 * @param beanMethodArgs
+		 * @param cglibMethodProxy
+		 * @return
+		 * @throws Throwable
+		 */
 		@Override
 		@Nullable
 		public Object intercept(Object enhancedConfigInstance, Method beanMethod, Object[] beanMethodArgs,
@@ -370,11 +379,11 @@ class ConfigurationClassEnhancer {
 			}
 
 			/**
-			 * 非常重要的一个判断,判断执行的方法和调用的方法是否是同一个方法
+			 * 非常重要的一个判断,判断当前正在被初始化的方法和要调用的beanMethod是否是同一个
+			 *	如果是同一个方法，就通过代理对象，去调用@Bean中方法的实例化
+			 *	如果不是同一个方法，就去spring容器中获取beanMethod对应的对象
 			 *
-			 * 这个判断的意思是，如果执行方法和调用方法是同一个，就去new
 			 *
-			 * 否则就
 			 */
 			if (isCurrentlyInvokedFactoryMethod(beanMethod)) {
 				// The factory is calling the bean method in order to instantiate and register the bean
@@ -420,6 +429,9 @@ class ConfigurationClassEnhancer {
 						}
 					}
 				}
+				/**
+				 * 在@Bean的方法中，调用了方法之后，就会执行这里的方法，先从spring容器中获取bean
+				 */
 				Object beanInstance = (useArgs ? beanFactory.getBean(beanName, beanMethodArgs) :
 						beanFactory.getBean(beanName));
 				if (!ClassUtils.isAssignableValue(beanMethod.getReturnType(), beanInstance)) {

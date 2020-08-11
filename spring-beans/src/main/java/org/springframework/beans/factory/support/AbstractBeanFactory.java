@@ -299,12 +299,16 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 			}
 
-			//添加到alreadyCreated集合当中，表示当前bean正在被创建，在注册bean(将beanDefinition存入到beanDefinitionMap中的时候，会判断)
+			/**
+			 * 添加到alreadyCreated集合当中，表示当前bean正在被创建，在注册bean(将beanDefinition存入到beanDefinitionMap中的时候，会判断)
+			 * 同时，会把存储mergeBean的map清空，然后再下面，再merge一次，是为了防止上一次merge到这一行代码这期间，beanDefinition的metadata被修改了
+			 */
 			if (!typeCheckOnly) {
 				markBeanAsCreated(beanName);
 			}
 
 			try {
+				// 上面情况了mergebeanMap之后，会在这里，再次进行merge
 				final RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
 				checkMergedBeanDefinition(mbd, beanName, args);
 
@@ -1232,6 +1236,15 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @throws NoSuchBeanDefinitionException if there is no bean with the given name
 	 * @throws BeanDefinitionStoreException in case of an invalid bean definition
 	 */
+	/**
+	 * 这里大致的意思是：
+	 * 	1.在beanDefinition进行了合并之后，会存入到mergedBeanDefinitions这个集合中
+	 * 	2.如果从map中获取到了合并之后的bd,那就不需要再次进行解析了
+	 * 	3.如果获取不到，就重走一遍merge的步骤
+	 * @param beanName
+	 * @return
+	 * @throws BeansException
+	 */
 	protected RootBeanDefinition getMergedLocalBeanDefinition(String beanName) throws BeansException {
 		// Quick check on the concurrent map first, with minimal locking.
 		RootBeanDefinition mbd = this.mergedBeanDefinitions.get(beanName);
@@ -1273,11 +1286,25 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			RootBeanDefinition mbd = null;
 
 			// Check with full lock now in order to enforce the same merged instance.
+			//1.containingBd 这个参数从上层调用过来，在代码中写死的null；如果为null，就从map中判断一下，是否已经存在
 			if (containingBd == null) {
 				mbd = this.mergedBeanDefinitions.get(beanName);
 			}
 
+			/**
+			 * 在5.2之后的源码中，这里的判断加了一个stale的判断，这个标识的意思是：定义是否需要合并bean
+			 *
+			 * 这里的mbd变量需要注意：
+			 * 	不管bd是RootBeanDefinition还是GenericBeanDefinition，都会强转成RootBeanDefinition(mbd)
+			 */
 			if (mbd == null) {
+				/**
+				 * 2.判断当前bd是否有设置parentName
+				 * 	如果当前bd没有设置parentName，我们姑且可以认为，这个bd就是父bd
+				 * 	下面的判断可以看到：如果bd是RootBeanDefinition,就clone一个新的bd
+				 * 	如果bd不是RootBeanDefinition，那就根据bd，new一个RootBeanDefinition对象
+				 *
+				 */
 				if (bd.getParentName() == null) {
 					// Use copy of given root bean definition.
 					if (bd instanceof RootBeanDefinition) {
@@ -1289,13 +1316,23 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 				else {
 					// Child bean definition: needs to be merged with parent.
+					/**
+					 * 3.如果进入到这里，说明当前bd设置了parentName属性
+					 */
 					BeanDefinition pbd;
 					try {
+						/**
+						 * 3.1 这里的意思，我的理解是：递归获取到bd的parent，直到获取到最后一个bd
+						 */
 						String parentBeanName = transformedBeanName(bd.getParentName());
 						if (!beanName.equals(parentBeanName)) {
 							pbd = getMergedBeanDefinition(parentBeanName);
 						}
 						else {
+							/**
+							 * 3.2 如果beanName和parentBeanName一样？这个场景是什么？
+							 * 根据parentName获取到parentBeanDefinition
+							 */
 							BeanFactory parent = getParentBeanFactory();
 							if (parent instanceof ConfigurableBeanFactory) {
 								pbd = ((ConfigurableBeanFactory) parent).getMergedBeanDefinition(parentBeanName);
@@ -1313,14 +1350,20 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					}
 					// Deep copy with overridden values.
 					/**
-					 * 下面的两行代码中，第一行是把new一个父bd
-					 * 第二行是把子bd的属性覆盖到父bd中
+					 * 下面的两行代码中，
+					 * 第一行代码是：根据父bdnew一个RootBeanDefinition
+					 * 第二行代码是：将bd(可以理解为子bd)的属性赋值到mbd中,子类的属性会覆盖父类的属性
+					 *
+					 * 如果bd本身就是RootBeanDefinition，那就不会执行这里的逻辑
 					 */
 					mbd = new RootBeanDefinition(pbd);
 					mbd.overrideFrom(bd);
 				}
 
 				// Set default singleton scope, if not configured before.
+				/**
+				 * 如果bd没有设置scope，默认是singleton
+				 */
 				if (!StringUtils.hasLength(mbd.getScope())) {
 					mbd.setScope(RootBeanDefinition.SCOPE_SINGLETON);
 				}
@@ -1336,6 +1379,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// Cache the merged bean definition for the time being
 				// (it might still get re-merged later on in order to pick up metadata changes)
 				if (containingBd == null && isCacheBeanMetadata()) {
+					/**
+					 * 将合并后的bd存入到map集合中，spring在后面初始化bean的流程中，就无需再次merge，直接从这个map中根据beanName获取即可
+					 */
 					this.mergedBeanDefinitions.put(beanName, mbd);
 				}
 			}

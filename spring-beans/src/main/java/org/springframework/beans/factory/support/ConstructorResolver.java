@@ -108,6 +108,23 @@ class ConstructorResolver {
 	 * or {@code null} if none (-> use constructor argument values from bean definition)
 	 * @return a BeanWrapper for the new instance
 	 */
+	/**
+	 * 对实例化要使用的构造方法进行二次推断
+	 * 1.判断上一个后置处理器推断出来可用的构造函数是否为null；如果为null，就重新获取所有的构造函数
+	 * 2.对构造函数进行排序：这里的排序，很重要，会根据public的构造函数参数从多到少排序，然后private的构造函数进行排序，根据参数从多到少依次排序
+	 * 3.循环遍历排序后的构造函数集合，进行判断
+	 * 	3.1 如果当前推断出来的构造函数不为null，且推断出来的这个构造函数的入参长度大于当前遍历的构造函数的入参长度，就无需进行循环遍历，因为构造函数的数组是排序之后的
+	 * 	3.2 如果3.1不满足，就判断当前构造函数的参数个数，是否小于最小入参长度
+	 * 	3.3 根据算法，推断当前构造函数需要的最少参数集合
+	 * 	3.4 根据当前构造函数和最少参数集合，获取到当前构造函数的差异量
+	 *
+	 *
+	 * @param beanName：当前要实例化的bean
+	 * @param mbd：beanName对应的mergeBeanDefinition
+	 * @param chosenCtors:第一次推断出来的可使用的构造函数集合
+	 * @param explicitArgs
+	 * @return
+	 */
 	public BeanWrapper autowireConstructor(String beanName, RootBeanDefinition mbd,
 			@Nullable Constructor<?>[] chosenCtors, @Nullable Object[] explicitArgs) {
 
@@ -127,12 +144,19 @@ class ConstructorResolver {
 		ArgumentsHolder argsHolderToUse = null;
 		Object[] argsToUse = null;
 
+		/**
+		 * explicitArgs：在创建bean的时候，这个参数基本上100%为null
+		 */
 		if (explicitArgs != null) {
 			argsToUse = explicitArgs;
 		}
 		else {
 			Object[] argsToResolve = null;
 			synchronized (mbd.constructorArgumentLock) {
+				/**
+				 * resolvedConstructorOrFactoryMethod:
+				 * 如果bean是原型的，那么会用到这个参数；如果bean是单实例的，永远不会进入到这里
+				 */
 				constructorToUse = (Constructor<?>) mbd.resolvedConstructorOrFactoryMethod;
 				if (constructorToUse != null && mbd.constructorArgumentsResolved) {
 					// Found a cached constructor...
@@ -150,32 +174,37 @@ class ConstructorResolver {
 		if (constructorToUse == null) {
 			/**
 			 * chosenCtors 参数就是前面后置处理器推断出来要使用的构造函数 为null表示后置处理器没有推断出 需要自己去解析判断
-			 * mpy 如果没有已经解析的构造方法，就需要自己去解析构造方法
+			 *
+			 * 	这里：如果推断出来可用的构造函数不为null；或者自动注入模型是AUTOWIRE_CONSTRUCTOR，就将autowiring设置为true
 			 */
 			// Need to resolve the constructor.
 			boolean autowiring = (chosenCtors != null ||
 					mbd.getResolvedAutowireMode() == AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
 			ConstructorArgumentValues resolvedValues = null;
 
-			//minNrOfArgs 是表示构建bean最少需要的参数个数，默认是0，如果说指定了需要使用两个参数，那explicitArgs就等于2
+			/**
+			 * minNrOfArgs 是表示构建bean最少需要的参数个数，默认是0，如果说指定了需要使用两个参数，那explicitArgs就等于2
+			 *
+			 * 这里获取到的是 给构造函数添加的参数  mbd.getConstructorArgumentValues().addGenericArgumentValue("com.test.UserDao");
+			 */
 			int minNrOfArgs;
 			if (explicitArgs != null) {
 				minNrOfArgs = explicitArgs.length;
 			}
 			else {
-
-				//这里获取到的是 给构造函数添加的参数  mbd.getConstructorArgumentValues().addGenericArgumentValue("com.luban.UserDao");
 				ConstructorArgumentValues cargs = mbd.getConstructorArgumentValues();
 				resolvedValues = new ConstructorArgumentValues();
 				minNrOfArgs = resolveConstructorArguments(beanName, mbd, bw, cargs, resolvedValues);
 			}
 
 			// Take specified constructors, if any.
+			/**
+			 * 如果上一个后置处理器推断出来的构造函数是null，这里会获取到所有的构造方法
+			 */
 			Constructor<?>[] candidates = chosenCtors;
 			if (candidates == null) {
 				Class<?> beanClass = mbd.getBeanClass();
 				try {
-					//这里会获取到bean中所有的构造函数，并将构造函数进行排序，参数最多的在最前面
 					candidates = (mbd.isNonPublicAccessAllowed() ?
 							beanClass.getDeclaredConstructors() : beanClass.getConstructors());
 				}
@@ -192,9 +221,16 @@ class ConstructorResolver {
 			 *  public XXXX(A,B)
 			 *  protected xxxx(a,b,c)
 			 *  protected xxxx(a,b)
+			 *
+			 *
+			 *  这里的排序是非常重要的
 			 */
 			AutowireUtils.sortConstructors(candidates);
-			//定义了一个变异差量，默认为int的最大值
+			/**
+			 * 定义了一个变异差量，默认为int的最大值
+			 * ambiguousConstructors:spring推断出来两个bean的权重都一样之后，会模糊不清，就会存入到这个集合中
+			 * causes：异常的集合类
+			 */
 			int minTypeDiffWeight = Integer.MAX_VALUE;
 			Set<Constructor<?>> ambiguousConstructors = null;
 			LinkedList<UnsatisfiedDependencyException> causes = null;
@@ -209,7 +245,7 @@ class ConstructorResolver {
 				/**
 				 * 这一行判断 是spring推断使用哪个构造函数的核心方法
 				 * constructorToUse的意思是：
-				 *   这个变量是用来保存已经解析过来并且在使用的构造方法，只有在这个参数为空的情况下才有推算的必要性
+				 *   这个变量是用来保存已经解析过了并且在使用的构造方法，只有在这个参数为空的情况下才有推算的必要性
 				 *   如果已经解析到一个符合的构造方法，就会赋值给这个变量；所以，如果这个变量不为null，就直接返回，说明spring已经找到了一个合适的构造方法，可以直接使用
 				 *
 				 *  argsToUse.length > paramTypes.length  paramTypes在第一次取出来的时候，是public参数最多的构造函数(因为前面有排序)，
@@ -223,11 +259,16 @@ class ConstructorResolver {
 					// do not look any further, there are only less greedy constructors left.
 					break;
 				}
-				//如果当前构造函数的参数列表长度小于最小需要的参数长度，那么就跳过本次循坏；举例：假如说最少需要2个参数，但是当前构造函数有一个参数，那就没必要进行本次判断了，肯定不满足
+				/**
+				 * 如果当前构造函数的参数列表长度小于最小需要的参数长度，那么就跳过本次循坏；举例：假如说最少需要2个参数，但是当前构造函数有一个参数，那就没必要进行本次判断了，肯定不满足
+				 */
 				if (paramTypes.length < minNrOfArgs) {
 					continue;
 				}
 
+				/**
+				 * argsHolder:最终调用构造函数，需要用的参数
+				 */
 				ArgumentsHolder argsHolder;
 				if (resolvedValues != null) {
 					try {
@@ -272,12 +313,13 @@ class ConstructorResolver {
 				/**
 				 * typeDiffWeight 表示差异量
 				 * 每个参数值的类型和构造函数参数列表类型的差异
-				 * 第一次进来的时候，肯定是小于minTypeDiffWeight的
+				 * 第一次进来的时候，肯定是小于minTypeDiffWeight的(因为默认的minTypeDiffWeight为Integer,MAX_VALUE)
 				 *
 				 * 如果进入到了else if 分支，代表什么意思呢？
-				 * 意思是两个构造函数都符合我们的要求，那spring如何来判断使用哪个？
+				 * 意思是两个构造函数都符合我们的要求(两个后遭函数的差异量一样)，那spring如何来判断使用哪个？
 				 *  首先把这个构造函数添加到 存放有异议的set中
 				 *   在下面进行了判断，如果这个set不等于空，会抛出异常
+				 *   也即：如果差异量最小的构造函数有多个，就抛出异常，因为不知道要用哪个
 				 *
 				 */
 				int typeDiffWeight = (mbd.isLenientConstructorResolution() ?
