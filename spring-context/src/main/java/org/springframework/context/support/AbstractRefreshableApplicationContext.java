@@ -123,6 +123,7 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	@Override
 	protected final void refreshBeanFactory() throws BeansException {
 		if (hasBeanFactory()) {
+			//清空单实例bean的map集合
 			destroyBeans();
 			closeBeanFactory();
 		}

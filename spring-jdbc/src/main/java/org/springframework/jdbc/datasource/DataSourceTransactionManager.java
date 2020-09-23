@@ -234,8 +234,11 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 
 	@Override
 	protected Object doGetTransaction() {
+		//
 		DataSourceTransactionObject txObject = new DataSourceTransactionObject();
+		// 设置是否允许嵌套事务
 		txObject.setSavepointAllowed(isNestedTransactionAllowed());
+		//
 		ConnectionHolder conHolder =
 				(ConnectionHolder) TransactionSynchronizationManager.getResource(obtainDataSource());
 		txObject.setConnectionHolder(conHolder, false);

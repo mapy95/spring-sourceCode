@@ -64,9 +64,17 @@ public class AspectJAwareAdvisorAutoProxyCreator extends AbstractAdvisorAutoProx
 	 * advisor should run first. "On the way out" of a join point, the highest precedence
 	 * advisor should run last.
 	 */
+	/**
+	 * 这里是对当前bean要用的通知方法进行排序
+	 * @param advisors the source List of Advisors
+	 * @return
+	 */
 	@Override
 	@SuppressWarnings("unchecked")
 	protected List<Advisor> sortAdvisors(List<Advisor> advisors) {
+		/**
+		 * 这里的advisor就是当前可用的切面对应的通知方法的集合，在这个方法中，会对这个集合中的通知方法进行排序
+		 */
 		List<PartiallyComparableAdvisorHolder> partiallyComparableAdvisors = new ArrayList<>(advisors.size());
 		for (Advisor element : advisors) {
 			partiallyComparableAdvisors.add(

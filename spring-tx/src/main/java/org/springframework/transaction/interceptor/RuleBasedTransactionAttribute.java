@@ -137,8 +137,25 @@ public class RuleBasedTransactionAttribute extends DefaultTransactionAttribute i
 		RollbackRuleAttribute winner = null;
 		int deepest = Integer.MAX_VALUE;
 
+		/**
+		 * 需要注意的是：这里的
+		 */
 		if (this.rollbackRules != null) {
 			for (RollbackRuleAttribute rule : this.rollbackRules) {
+				/**
+				 * depth:当前rule和ex的相似度
+				 *
+				 * deepest:和ex最相近的depth
+				 * winner：相似度最近的RollbackRuleAttribute
+				 *
+				 * 这里会保存和业务代码抛出异常最相似的rule
+				 * 比如：
+				 * 	我在代码中，抛出了一个java.lang.ArithmeticException: / by zero
+				 *
+				 * 	如果我在@Transactional(rollbackFor = {Exception.class,ArithmeticException.class})
+				 * 	那肯定会返回ArithmeticException这个rule，因为ArithmeticException返回的depth是0
+				 * 	Exception返回的的depth是2
+				 */
 				int depth = rule.getDepth(ex);
 				if (depth >= 0 && depth < deepest) {
 					deepest = depth;
@@ -156,7 +173,9 @@ public class RuleBasedTransactionAttribute extends DefaultTransactionAttribute i
 			logger.trace("No relevant rollback rule found: applying default rules");
 			return super.rollbackOn(ex);
 		}
-
+		/**
+		 * 如果相似度最近的rule不是无需回滚的类型，就可以进行事务回滚
+		 */
 		return !(winner instanceof NoRollbackRuleAttribute);
 	}
 

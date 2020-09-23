@@ -339,6 +339,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 	 */
 	@Override
 	public final TransactionStatus getTransaction(@Nullable TransactionDefinition definition) throws TransactionException {
+		// TODO 这里是获取到当前的事务对象，这里待学习
 		Object transaction = doGetTransaction();
 
 		// Cache debug flag to avoid repeated checks.
@@ -349,13 +350,32 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			definition = new DefaultTransactionDefinition();
 		}
 
-		//如果当前存在事务，就根据不同的传播机制来处理,如果当前存在事务，就执行return下面的代码;在这个方法中，会根据传播机制来判断如何运行
+		/**
+		 * 如果当前存在事务，就根据不同的传播机制来处理
+		 * 		PROPAGATION_NOT_SUPPORTED：以非事务方法运行，如果存在事务，就把当前事务挂起
+		 * 		PROPAGATION_REQUIRES_NEW：新建事务，如果存在事务，就把当前事务挂起
+		 * 		PROPAGATION_NESTED：如果当前事务存在，就嵌套事务运行，如果事务不存在，就创建新的事务
+		 * 		PROPAGATION_NEVER：以非事务运行，如果当前存在事务，就抛出异常
+		 *
+		 *
+		 * 如果没有进入这个if判断，就表示当前不存在事务
+		 * 		PROPAGATION_MANDATORY：使用当前事务运行，如果不存在事务，就抛出异常
+		 * 		PROPAGATION_REQUIRED：如果不存在事务，就新建一个事务运行；如果事务存在，就使用当前事务
+		 * 		PROPAGATION_REQUIRES_NEW：
+		 * 		PROPAGATION_NESTED
+		 *
+		 *
+		 * 	PROPAGATION_SUPPORTS:没有进行判断处理，因为这个隔离级别是：如果事务存在，就事务运行，如果事务不存在，就非事务运行
+		 */
 		if (isExistingTransaction(transaction)) {
 			// Existing transaction found -> check propagation behavior to find out how to behave.
 			return handleExistingTransaction(definition, transaction, debugEnabled);
 		}
 
 		// Check definition settings for new transaction.
+		/**
+		 * 判断超时时间是否小于-1
+		 */
 		if (definition.getTimeout() < TransactionDefinition.TIMEOUT_DEFAULT) {
 			throw new InvalidTimeoutException("Invalid transaction timeout", definition.getTimeout());
 		}
@@ -378,6 +398,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 				boolean newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);
 				DefaultTransactionStatus status = newTransactionStatus(
 						definition, transaction, true, newSynchronization, debugEnabled, suspendedResources);
+				// 创建一个新的事务
 				doBegin(transaction, definition);
 				prepareSynchronization(status, definition);
 				return status;
@@ -387,6 +408,15 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 				throw ex;
 			}
 		}
+		/**
+		 * 代码执行到这里，说明当前不存在事务，且事务的传播机制也不是上面四种
+		 * 	PROPAGATION_REQUIRED
+		 * 	PROPAGATION_REQUIRES_NEW
+		 * 	PROPAGATION_NESTED
+		 * 	PROPAGATION_MANDATORY
+		 *
+		 * 	剩下的三种都是在非事务方法中运行、或者是没有事务，就以非事务方法运行的
+		 */
 		else {
 			// Create "empty" transaction: no actual transaction, but potentially synchronization.
 			if (definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT && logger.isWarnEnabled()) {
@@ -405,11 +435,17 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			TransactionDefinition definition, Object transaction, boolean debugEnabled)
 			throws TransactionException {
 
+		/**
+		 * 方法运行到这里，说明当前是有事务的
+		 */
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NEVER) {
 			throw new IllegalTransactionStateException(
 					"Existing transaction found for transaction marked with propagation 'never'");
 		}
 
+		/**
+		 * 以非事务方式运行，如果当前存在事务，就将事务挂起
+		 */
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NOT_SUPPORTED) {
 			if (debugEnabled) {
 				logger.debug("Suspending current transaction");
@@ -420,6 +456,9 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 					definition, null, false, newSynchronization, debugEnabled, suspendedResources);
 		}
 
+		/**
+		 * 新建事务，如果当前存在事务，就将事务挂起
+		 */
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW) {
 			if (debugEnabled) {
 				logger.debug("Suspending current transaction, creating new transaction with name [" +
@@ -440,6 +479,9 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			}
 		}
 
+		/**
+		 * 如果事务存在，就在嵌套事务内运行，如果事务不存在，就创建一个新的事务
+		 */
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED) {
 			if (!isNestedTransactionAllowed()) {
 				throw new NestedTransactionNotSupportedException(
@@ -449,6 +491,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			if (debugEnabled) {
 				logger.debug("Creating nested transaction with name [" + definition.getName() + "]");
 			}
+			// 判断是否允许嵌套事务运行
 			if (useSavepointForNestedTransaction()) {
 				// Create savepoint within existing Spring-managed transaction,
 				// through the SavepointManager API implemented by TransactionStatus.
@@ -471,6 +514,14 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			}
 		}
 
+		/**
+		 * 代码如果执行到这里，说明当前有事务，且传播机制不是上面这几个
+		 * 	PROPAGATION_NESTED
+		 * 	PROPAGATION_REQUIRES_NEW
+		 * 	PROPAGATION_NEVER
+		 * 	PROPAGATION_NOT_SUPPORTED
+		 *
+		 */
 		// Assumably PROPAGATION_SUPPORTS or PROPAGATION_REQUIRED.
 		if (debugEnabled) {
 			logger.debug("Participating in existing transaction");

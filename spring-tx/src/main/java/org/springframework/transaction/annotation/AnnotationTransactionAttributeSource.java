@@ -155,6 +155,12 @@ public class AnnotationTransactionAttributeSource extends AbstractFallbackTransa
 	 * @param element the annotated method or class
 	 * @return the configured transaction attribute, or {@code null} if none was found
 	 */
+	/**
+	 * 解析当前element是否有添加事务注解@Transactional
+	 * 这里入参的element，要么是method，要么是class
+	 * @param element
+	 * @return
+	 */
 	@Nullable
 	protected TransactionAttribute determineTransactionAttribute(AnnotatedElement element) {
 		for (TransactionAnnotationParser annotationParser : this.annotationParsers) {

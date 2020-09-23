@@ -41,6 +41,7 @@ public class ProxyTransactionManagementConfiguration extends AbstractTransaction
 	 *
 	 * @return
 	 * 注入事务增强器
+	 * 这里是创建一个advisor，然后设置切点(TransactionInterceptor)和通知(TransactionAttributeSource)
 	 */
 	@Bean(name = TransactionManagementConfigUtils.TRANSACTION_ADVISOR_BEAN_NAME)
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
@@ -58,6 +59,12 @@ public class ProxyTransactionManagementConfiguration extends AbstractTransaction
 	/**
 	 * @return
 	 * 往spring容器中注入事务解析器(解析事务注解上的各个参数)
+	 * 在执行第八个后置处理器的时候，判断是否需要增强的时候，会解析transaction注解
+	 *
+	 * 这里在new AnnotationTransactionAttributeSource()对象的时候，有一个非常关键的点：
+	 * 	publicMethodsOnly  这里在调用构造函数的时候，默认初始化该值为true；该值的意思是：值允许public方法进行事务代理
+	 *
+	 * 	在后面判断是否可以对方法进行增强的时候，会判断该值，以及对应method是否是public，如果是，直接return null，不进行代理增强
 	 */
 	@Bean
 	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)

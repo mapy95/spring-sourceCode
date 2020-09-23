@@ -1393,6 +1393,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// Give any InstantiationAwareBeanPostProcessors the opportunity to modify the
 		// state of the bean before properties are set. This can be used, for example,
 		// to support styles of field injection.
+		/**
+		 * 根据该标识判断是否需要进行属性注入
+		 */
 		boolean continueWithPropertyPopulation = true;
 
 		/**
@@ -1521,7 +1524,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		for (String propertyName : propertyNames) {
 			if (containsBean(propertyName)) {
 				/**
-				 * getBean()这个方法我个人感觉就可以说明autowire_name是根据名字来注入属性的
+				 * getBean()这个方法我个人感觉就可以说明autowire_name是根据名字来注入属性的,这里是真正的从单实例池中查询对象的
 				 * 这里的propertyName就是set方法对应的name
 				 */
 				Object bean = getBean(propertyName);
@@ -1563,6 +1566,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		Set<String> autowiredBeanNames = new LinkedHashSet<>(4);
 		/**
 		 * 这行代码是获取到当前bean中所有的writeMethod方法，个人理解，就是set方法对应的集合
+		 * 根据类型自动注入的时候，会获取到set方法的参数敌
 		 */
 		String[] propertyNames = unsatisfiedNonSimpleProperties(mbd, bw);
 		for (String propertyName : propertyNames) {

@@ -294,7 +294,7 @@ final class PostProcessorRegistrationDelegate {
 
 		/**
 		 * 1.获取到所有实现了beanPostProcessor接口的实现类的name,从beanDefinitionMaps中获取
-		 *  这里在从BeanDefinitionMap中获取BeanPostProcessor类型的实现类的时候，会进行bean的合并，也即：将bean转换Wie
+		 *  这里在从BeanDefinitionMap中获取BeanPostProcessor类型的实现类的时候，会进行bean的合并，也即：将bean转换为RootBeanDefinition
 		 */
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
 
@@ -346,6 +346,7 @@ final class PostProcessorRegistrationDelegate {
 		// Next, register the BeanPostProcessors that implement Ordered.
 		List<BeanPostProcessor> orderedPostProcessors = new ArrayList<>();
 		for (String ppName : orderedPostProcessorNames) {
+			//在通过getBean()方法获取orderedPostProcessorNames中beanPostProcessor对象的时候，会对beanPostProcessor进行初始化
 			BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
 			orderedPostProcessors.add(pp);
 			if (pp instanceof MergedBeanDefinitionPostProcessor) {
@@ -367,6 +368,9 @@ final class PostProcessorRegistrationDelegate {
 		registerBeanPostProcessors(beanFactory, nonOrderedPostProcessors);
 
 		// Finally, re-register all internal BeanPostProcessors.
+		/**
+		 * 这里为什么要对mergeBeanDefinitionPostProcessor的beanPostProcessor进行重新一遍的处理？
+		 */
 		sortPostProcessors(internalPostProcessors, beanFactory);
 		registerBeanPostProcessors(beanFactory, internalPostProcessors);
 

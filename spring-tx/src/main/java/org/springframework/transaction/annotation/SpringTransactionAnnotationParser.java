@@ -39,6 +39,13 @@ import org.springframework.transaction.interceptor.TransactionAttribute;
 @SuppressWarnings("serial")
 public class SpringTransactionAnnotationParser implements TransactionAnnotationParser, Serializable {
 
+	/**
+	 * 如果当前element添加了事务注解，就去解析注解对应的配置信息
+	 * 将对应的配置，解析为TransactionAttribute对象
+	 *
+	 * @param element the annotated method or class
+	 * @return
+	 */
 	@Override
 	@Nullable
 	public TransactionAttribute parseTransactionAnnotation(AnnotatedElement element) {
@@ -56,6 +63,13 @@ public class SpringTransactionAnnotationParser implements TransactionAnnotationP
 		return parseTransactionAnnotation(AnnotationUtils.getAnnotationAttributes(ann, false, false));
 	}
 
+
+	/**
+	 * 解析注解上对应的配置信息
+	 * 在第八个后置处理器被调用的时候，会执行
+	 * @param attributes
+	 * @return
+	 */
 	protected TransactionAttribute parseTransactionAnnotation(AnnotationAttributes attributes) {
 		RuleBasedTransactionAttribute rbta = new RuleBasedTransactionAttribute();
 

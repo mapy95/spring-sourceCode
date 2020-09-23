@@ -150,6 +150,17 @@ import org.springframework.core.Ordered;
  * @see ProxyTransactionManagementConfiguration
  * @see org.springframework.transaction.aspectj.AspectJTransactionManagementConfiguration
  */
+
+/**
+ * 该注解是开启事务管理的注解
+ * 在该注解中，会通过import注解注入两个bean
+ * 		AutoProxyRegistrar
+ * 			该类实现了ImportBeanDefinitionRegistrar,会注入一个beanPostprocessor的实现类，该实现类主要是完成事务的代理
+ * 		ProxyTransactionManagementConfiguration
+ *
+ *
+ * @author mpy
+ */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented

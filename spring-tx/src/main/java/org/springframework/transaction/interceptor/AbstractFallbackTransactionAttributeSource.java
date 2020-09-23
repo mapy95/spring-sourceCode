@@ -86,6 +86,8 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 	 * @param targetClass the target class for this invocation (may be {@code null})
 	 * @return a TransactionAttribute for this method, or {@code null} if the method
 	 * is not transactional
+	 *
+	 * 这里是判断当前方法是否需要事务代理的重要方法
 	 */
 	@Override
 	@Nullable
@@ -95,6 +97,13 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 		}
 
 		// First, see if we have a cached value.
+		/**
+		 * 根据method和targetClass生成一个cacheKey
+		 * 如果这里已经对方法进行了一次解析，就会把解析之后获取到的TransactionAttribute对象和对应的key存入到一个map集合中
+		 * 这样下次再有地方用到这个方法的时候，就无须再次解析，直接从map中获取即可
+		 * 如果这里没有获取到，返回的null，就将value设置为null，写入到map中
+		 * 如果获取到对应的txAttr，就setDescriptor设置下该属性，然后写入到map集合中
+		 */
 		Object cacheKey = getCacheKey(method, targetClass);
 		TransactionAttribute cached = this.attributeCache.get(cacheKey);
 		if (cached != null) {
@@ -109,8 +118,15 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 		}
 		else {
 			// We need to work it out.
+			/**
+			 * 如果是第一次进入到这里，一定会走这个方法
+			 * 这里就是判断当前方法是否是public，是否有添加@Transactional注解
+			 */
 			TransactionAttribute txAttr = computeTransactionAttribute(method, targetClass);
 			// Put it in the cache.
+			/**
+			 * 如果当前方法没有添加事务注解，或者不满足生成代理对象的要求，就将value设置为null
+			 */
 			if (txAttr == null) {
 				this.attributeCache.put(cacheKey, NULL_TRANSACTION_ATTRIBUTE);
 			}
@@ -146,10 +162,16 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 	 * <p>As of 4.1.8, this method can be overridden.
 	 * @since 4.1.8
 	 * @see #getTransactionAttribute
+	 * 
+	 * 这里是判断method是否需要增强的关键点，如果返回的TransactionAttribute不为null，就表示需要增强，如果为null，就不增强
+	 *
 	 */
 	@Nullable
 	protected TransactionAttribute computeTransactionAttribute(Method method, @Nullable Class<?> targetClass) {
 		// Don't allow no-public methods as required.
+		/**
+		 * 判断当前方法是否是public修饰的，以及是否只支持public方法进行事务代理
+		 */
 		if (allowPublicMethodsOnly() && !Modifier.isPublic(method.getModifiers())) {
 			return null;
 		}
@@ -159,6 +181,10 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 		Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
 
 		// First try is the method in the target class.
+		/**
+		 * 2.查找当前方法是否有添加@Transactional注解，如果有添加，就解析对应的注解信息
+		 * 下面有几个重复查找的动作，这里还没有搞明白依次获取到的是什么，总之都是判断入参的这个方法或者class有没有事务注解
+		 */
 		TransactionAttribute txAttr = findTransactionAttribute(specificMethod);
 		if (txAttr != null) {
 			return txAttr;

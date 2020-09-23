@@ -152,6 +152,12 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	private AutowireCandidateResolver autowireCandidateResolver = new SimpleAutowireCandidateResolver();
 
 	/** Map from dependency type to corresponding autowired value */
+	/**
+	 * ApplicationContext
+	 * ApplicationEventPublisher
+	 * BeanFactory
+	 * ResourceLoader
+	 */
 	private final Map<Class<?>, Object> resolvableDependencies = new ConcurrentHashMap<>(16);
 
 	/** Map of bean definition objects, keyed by bean name */
@@ -730,6 +736,13 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		return (this.configurationFrozen || super.isBeanEligibleForMetadataCaching(beanName));
 	}
 
+	/**
+	 * 在该方法中，主要完成了以下几个操作
+	 * 1.遍历所有的beanDefinitionName，完成合并bean的操作
+	 * 2.如果当前bean是单实例的、非懒加载的、非抽象bean，就调用bean的后置处理器 完成实例化的操作
+	 * 3.在所有bean都实例化完成之后，调用实现了SmartInitializingSingleton接口的bean对象，完成org.springframework.beans.factory.SmartInitializingSingleton#afterSingletonsInstantiated()方法的调用
+	 * @throws BeansException
+	 */
 	@Override
 	public void preInstantiateSingletons() throws BeansException {
 		if (logger.isDebugEnabled()) {
@@ -740,6 +753,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
 		/**
 		 * 在将beanDefinition存入BeanDefinitionMap的同时，会将beanName存入到一个list集合中
+		 * 这里直接从beanDefinitionNames这个集合中，获取所有要实例化的bean的name
 		 */
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
@@ -756,12 +770,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			 *  BeanDefinitionB设置需要注入type属性，再设置BeanDefinitionB 继承RootBeanDefinitionA,假如在这里不合并rootBeanDefinitionA，那么B这个bd需要注入的属性就只有type，不会有name，那也就不是我们想要的bd了；所以这里要把子bd的属性合并到新的RootBeanDefinition中
 			 *
 			 *  并且，spring在初始化bean的过程中，会对bd进行一些校验(比如：是否是单实例的，是否是抽象的等);所以：这里要先把bd进行合并，获取到父类的bd属性信息
-			 *
 			 */
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
 			// 非抽象、非懒加载、单实例的bean
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
-				//判断当前bean是否是beanFactory；如果是factoryBean + &
+				//判断当前bean是否是beanFactory；如果是factoryBean,在beanName前面加上 &
 				if (isFactoryBean(beanName)) {
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
@@ -782,12 +795,18 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 					}
 				}
 				else {
+					//这里是去完成bean的实例化
 					getBean(beanName);
 				}
 			}
 		}
 
 		// Trigger post-initialization callback for all applicable beans...
+		/**
+		 * 这里应该也算是spring提供的一个扩展点之一
+		 * 在所有的bean都实例化完成之后，会调用org.springframework.beans.factory.SmartInitializingSingleton#afterSingletonsInstantiated()
+		 * 来完成程序员的一些业务逻辑操作
+		 */
 		for (String beanName : beanNames) {
 			Object singletonInstance = getSingleton(beanName);
 			if (singletonInstance instanceof SmartInitializingSingleton) {
@@ -1068,6 +1087,16 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		return null;
 	}
 
+	/**
+	 * 处理@Autowired注解要注入的bean对象
+	 * @param descriptor the descriptor for the dependency (field/method/constructor)
+	 * @param requestingBeanName the name of the bean which declares the given dependency
+	 * @param autowiredBeanNames a Set that all names of autowired beans (used for
+	 * resolving the given dependency) are supposed to be added to
+	 * @param typeConverter the TypeConverter to use for populating arrays and collections
+	 * @return
+	 * @throws BeansException
+	 */
 	@Override
 	@Nullable
 	public Object resolveDependency(DependencyDescriptor descriptor, @Nullable String requestingBeanName,
@@ -1144,10 +1173,13 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			 *
 			 *  这个方法中，对Qualifier注解进行了处理；如果一个接口有多个实现类，但是没有加@Qualifier注解，那么就会返回多个
 			 *
+			 *  如果@Qualifier指定的value在spring容器中没有，这里返回的map集合就是空
+			 *
 			 */
 			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, type, descriptor);
 			if (matchingBeans.isEmpty()) {
 				if (isRequired(descriptor)) {
+					// 如果匹配到的要注入的bean是null，就报错
 					raiseNoMatchingBeanFound(type, descriptor.getResolvableType(), descriptor);
 				}
 				return null;
@@ -1167,6 +1199,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				 * 	 2.再判断@Priority注解声明的优先级
 				 * 	 3.如果两个注解都没有，那就根据controller中注入的service的name和matchingBeans中的beanName进行匹配
 				 * 	   如果匹配上，就注入匹配上的beanName对应的beanClass
+				 * 	   这里需要注意的是：根据name查询的时候，会先根据type从beanDefinitionMap中查询到符合类型的beanDefinitionNames
+				 * 	   然后从beanDefinitionNames中依次匹配，是否和name一致
 				 */
 				autowiredBeanName = determineAutowireCandidate(matchingBeans, descriptor);
 				if (autowiredBeanName == null) {
@@ -1198,6 +1232,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			if (instanceCandidate instanceof Class) {
 				/**
 				 * 根据获取到的beanName和type从容器中查找。如果没有找到，就创建
+				 * 这里才是真正的从单实例池中获取对象，如果对象没有，就创建
 				 */
 				instanceCandidate = descriptor.resolveCandidate(autowiredBeanName, type, this);
 			}
@@ -1352,6 +1387,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		/**
 		 * 根据类型，获取当前beanDefinitionMap中的beanName，注意：这里是从beanDefinitionMap中获取的，并不是直接从spring
 		 * 容器中获取
+		 * 获取到的是待注入bean的name
 		 */
 		String[] candidateNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 				this, requiredType, true, descriptor.isEager());
@@ -1463,6 +1499,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		 *   如果service有多个实现类，其实注入的是service01，就是这里判断的
 		 *
 		 *   这里我觉得，也是我们平常所说的，如果根据type找到多个，或者没有找到，就根据name来注入，这里就是根据name来注入的这一步
+		 *   candidates：是根据类型从beanDefinitionMap中获取到的符合类型的beanDefinitionNames
+		 *   descriptor.getDependencyName()：是@Autowired注解属性注入的属性name
 		 */
 		for (Map.Entry<String, Object> entry : candidates.entrySet()) {
 			String candidateName = entry.getKey();
@@ -1485,7 +1523,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	 */
 	/**
 	 * 判断接口的多个实现类中，哪个实现类，添加了@Primary注解，哪个加了该注解，就优先返回，但是，如果多个实现类
-	 * 都添加了@Primary注解，就会抛出异常(1503行这里的异常信息)
+	 * 都添加了@Primary注解，就会抛出异常(1528行这里的异常信息)
 	 * @param candidates
 	 * @param requiredType
 	 * @return
@@ -1498,6 +1536,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			Object beanInstance = entry.getValue();
 			if (isPrimary(candidateBeanName, beanInstance)) {
 				if (primaryBeanName != null) {
+					/**
+					 * 这里是一个比较巧妙的赋值判断  这里再好好看下
+					 */
 					boolean candidateLocal = containsBeanDefinition(candidateBeanName);
 					boolean primaryLocal = containsBeanDefinition(primaryBeanName);
 					if (candidateLocal && primaryLocal) {

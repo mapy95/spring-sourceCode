@@ -181,7 +181,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * singletonObjects是spring单实例池
 	 * 我们暂时称
 	 *   earlySingletonObjects为三级缓存  该map是在后面进行判断，是否允许循环依赖，如果允许，就把bean存到这个map中
-	 *   singletonFactories为二级缓存  在判断是单实例bean的时候，将包含bean的beanFactory存到该map中
+	 *   singletonFactories为二级缓存  在判断是单实例bean的时候，将包含bean的beanFactory存到该map中，这个map中存储的是一个生成代理对象的factory
+	 *   singletonObjects为一级缓存，存储的是实例化之后的bean
 	 *
 	 *   在这里，三级缓存的map保存的是从二级缓存中取到的一个对象，取到之后，从二级缓存中将bean删除
 	 *   这样做是为了防止重复创建，
@@ -189,7 +190,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 *   在获取到依赖的对象之后，会进行一次类型校验 org.springframework.beans.factory.support.AbstractBeanFactory#isTypeMatch(java.lang.String, org.springframework.core.ResolvableType)
 	 *
 	 *   循环依赖的处理：
-	 *   	如果A注入了B，B也注入了A；在第一次实例化A的时候，
+	 *   	如果A注入了B，B也注入了A；在第一次实例化A的时候，会注入A，注入A的时候，会反过来去实例化B
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
@@ -201,6 +202,15 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				if (singletonObject == null && allowEarlyReference) {
 					ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 					if (singletonFactory != null) {
+						/**
+						 * 这里getObject会调用getEarlyBeanReference(beanName, mbd, bean)方法，完成动态代理对象的生成
+						 * 这里为什么要调用这个方法？
+						 * 我的理解是这样的：在属性注入之后，还有两个后置处理器需要调用：
+						 * 	1.applyBeanPostProcessorsBeforeInitialization   invokeInitMethod方法，也即：调用bean的初始化方法的后置处理器
+						 * 	2.applyBeanPostProcessorsAfterInitialization  这里完成的是：代理对象的生成（比如：AOP动态代理对象生成，事务方法代理对象生成）
+						 *
+						 * 既然有了循环依赖，总要有一个bean是要先注入的，在注入
+						 */
 						singletonObject = singletonFactory.getObject();
 						this.earlySingletonObjects.put(beanName, singletonObject);
 						this.singletonFactories.remove(beanName);
@@ -242,6 +252,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					/**
 					 * 这里的singletonFactory.getObject()才会去真正的创建bean
 					 * 创建出来的是代理对象
+					 *
+					 * 这里的singletonFactory.getObject();会调用createBean(beanName, mbd, args);方法  lambda表达式
 					 */
 					singletonObject = singletonFactory.getObject();
 					newSingleton = true;
@@ -268,6 +280,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					}
 					afterSingletonCreation(beanName);
 				}
+				/**
+				 * 这里是把真正的初始化完成的单实例bean放到spring容器中
+				 */
 				if (newSingleton) {
 					addSingleton(beanName, singletonObject);
 				}

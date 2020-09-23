@@ -249,10 +249,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		Object bean;
 
 		/**
-		 * mpy
 		 * 1.从单例池中获取当前bean
 		 * 2.这里是循环依赖的重要方法之一
-		 *
+		 * 如果取到的sharedInstance不为null，就表示从单实例池中或者二级缓存中，获取到了bean，就无须进行实例化
 		 */
 		// Eagerly check singleton cache for manually registered singletons.
 		Object sharedInstance = getSingleton(beanName);
@@ -266,6 +265,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					logger.debug("Returning cached instance of singleton bean '" + beanName + "'");
 				}
 			}
+			/**
+			 * 如果获取到的bean是factoryBean类型的（比如：mybatis的mapper接口就是MapperFactoryBean类型的），就会在下面这行代码中，调用
+			 * factoryBean的getObject()方法，完成代理对象的生成或者一些业务逻辑的处理
+			 */
 			bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
 		}
 
@@ -313,6 +316,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				checkMergedBeanDefinition(mbd, beanName, args);
 
 				// Guarantee initialization of beans that the current bean depends on.
+				/**
+				 * 处理bean的dependsOn谁像你
+				 */
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
 					for (String dep : dependsOn) {

@@ -44,6 +44,9 @@ import org.springframework.util.ReflectionUtils;
  *
  * @author Juergen Hoeller
  * @since 2.5
+ *
+ * 这个类是封装了当前class要注入的元素信息。
+ * spring会把class要注入的元素，放入到一个list集合中，并根据list集合和class类build一个InjectionMetadata对象
  */
 public class InjectionMetadata {
 

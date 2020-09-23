@@ -490,7 +490,13 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 	 * @return the resource object (never {@code null})
 	 * @throws NoSuchBeanDefinitionException if no corresponding target resource found
 	 */
-	//如果是通过@Resource来注入的bean，就是通过这个方法找要注入的bean
+	/**
+	 * 如果是通过@Resource来注入的bean，就是通过这个方法找要注入的bean
+	 * @param element
+	 * @param requestingBeanName
+	 * @return
+	 * @throws NoSuchBeanDefinitionException
+	 */
 	protected Object getResource(LookupElement element, @Nullable String requestingBeanName)
 			throws NoSuchBeanDefinitionException {
 

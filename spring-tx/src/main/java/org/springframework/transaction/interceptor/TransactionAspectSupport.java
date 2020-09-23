@@ -279,14 +279,16 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 			final InvocationCallback invocation) throws Throwable {
 
 		// If the transaction attribute is null, the method is non-transactional.
+		// 如果事务属性为null，就表示目标方法不存在事务
 		TransactionAttributeSource tas = getTransactionAttributeSource();
 		//获取事务属性
 		final TransactionAttribute txAttr = (tas != null ? tas.getTransactionAttribute(method, targetClass) : null);
-		//获取事务管理器
+		//根据事务属性获取获取事务管理器，这里一般是 DataSourceTransactiuonManager
 		final PlatformTransactionManager tm = determineTransactionManager(txAttr);
+		// 生成目标方法的唯一标识
 		final String joinpointIdentification = methodIdentification(method, targetClass, txAttr);
 
-		//如果事务属性 txAttr为空，表示是编程式事务
+		//下面是声明式事务的处理逻辑
 		if (txAttr == null || !(tm instanceof CallbackPreferringPlatformTransactionManager)) {
 			// Standard transaction demarcation with getTransaction and commit/rollback calls.
 			//看是否有必要创建一个事务，根据事务的传播行为做判断
@@ -551,12 +553,31 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 	 * @param txInfo information about the current transaction
 	 * @param ex throwable encountered
 	 */
+	/**
+	 * 这里是判断是否需要回滚的逻辑
+	 * 如果在事务注解上指定了回滚的异常类型、或者指定了不回滚的异常类型，就会在这里进行判断
+	 * 1.如果判断满足回滚的条件，就事务回滚
+	 * 		先判断开发人员指定的类型，如果业务代码抛出的异常符合指定的类型，就回滚
+	 * 		如果没有指定，就判断是否是异常(throwable)或者运行时异常(runTimeException)，如果是，就回滚
+	 *
+	 * 2.否则，就提交事务
+	 *
+	 * @param txInfo
+	 * @param ex
+	 */
 	protected void completeTransactionAfterThrowing(@Nullable TransactionInfo txInfo, Throwable ex) {
 		if (txInfo != null && txInfo.getTransactionStatus() != null) {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Completing transaction for [" + txInfo.getJoinpointIdentification() +
 						"] after exception: " + ex);
 			}
+			/**
+			 * 如果程序员有指定回滚或者不回滚的异常，就会进入
+			 * 	org.springframework.transaction.interceptor.RuleBasedTransactionAttribute#rollbackOn(java.lang.Throwable)进行判断
+			 *
+			 * 如果没有指定，就默认调用org.springframework.transaction.interceptor.DefaultTransactionAttribute#rollbackOn(java.lang.Throwable)
+			 * 进行判断
+			 */
 			if (txInfo.transactionAttribute != null && txInfo.transactionAttribute.rollbackOn(ex)) {
 				try {
 					txInfo.getTransactionManager().rollback(txInfo.getTransactionStatus());
